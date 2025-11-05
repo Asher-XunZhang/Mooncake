@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-namespace mooncake {
+namespace mooncake_conductor {
 
 struct SLORequirement {
     double max_ttft_ms = 100.0;
@@ -24,6 +24,14 @@ struct NodeMetrics {
     double kv_cache_hit_rate = 0.0;
     int64_t last_update_time = 0;
 };
+
+struct ProxyServerArgs {
+    int port = 8000;
+    std::string host = "localhost";
+    int max_retries = 3;
+    double retry_delay = 0.001;
+};
+
 
 // 缓存匹配请求，承载一次请求的完整上下文信息
 struct CacheMatchRequest {
