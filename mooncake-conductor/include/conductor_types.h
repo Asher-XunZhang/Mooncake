@@ -26,8 +26,8 @@ struct NodeMetrics {
 };
 
 struct ProxyServerArgs {
-    int port = 8000;
-    std::string host = "localhost";
+    uint16_t port = 8000;
+    std::string host = "0.0.0.0";
     int max_retries = 3;
     double retry_delay = 0.001;
 };

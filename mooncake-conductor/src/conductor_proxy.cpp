@@ -1,24 +1,30 @@
 #include "conductor_proxy.h"
 #include "request_handler.h"
+#include "conductor_types.h"
 
 #include <glog/logging.h>
+#include <memory>
+#include <string>
 #include <ylt/coro_http/coro_http_client.hpp>
 #include <ylt/coro_http/coro_http_server.hpp>
+#include <ylt/easylog/record.hpp>
 
 
 namespace mooncake_conductor {
 
-ProxyServer::ProxyServer(ProxyServerArgs& config)
-    : http_server_(4, config.port),
-      request_handler_(std::to_string(config.max_retries), std::to_string(config.retry_delay)) {
+ProxyServer::ProxyServer(const ProxyServerArgs& config)
+    : port_(config.port),
+      host_(config.host),
+      http_server_(std::make_unique<coro_http::coro_http_server>(4, config.port)),
+      request_handler_(std::make_unique<RequestHandler>("12", "34")) {
   init_http_server();
 }
 
 ProxyServer::~ProxyServer() {
-    http_server_.stop();
+    http_server_->stop();
 }
 
-//    curl -X POST http://localhost:9000/v1/completions \
+//    curl -X POST http://localhost:8000/v1/completions \
 //      -H "Content-Type: application/json" \
 //      -d '{
 //            "model": "your-model",
@@ -28,7 +34,7 @@ ProxyServer::~ProxyServer() {
 
 //  Or for chat completions:
 
-//    curl -X POST http://localhost:9000/v1/chat/completions \
+//    curl -X POST http://localhost:8000/v1/chat/completions \
 //      -H "Content-Type: application/json" \
 //      -d '{
 //            "model": "your-model",
@@ -38,12 +44,12 @@ ProxyServer::~ProxyServer() {
 void ProxyServer::init_http_server() {
     using namespace coro_http;
 
-    http_server_.set_http_handler<POST>(
+    http_server_->set_http_handler<POST>(
         "/v1/completions", [&](coro_http_request& req, coro_http_response& resp) {
             auto request_body = req.get_queries();
             resp.add_header("Content-Type", "application/json");
-
-            auto result = request_handler_.handleRequest(request_body);
+            LOG(INFO) << "reievce request /v1/completions";
+            auto result = request_handler_->handleRequest(request_body);
             // TODO 增加对于result解析等操作
             if (result.size()) {
                 resp.set_status_and_content(status_type::ok, std::move(result));
@@ -53,12 +59,13 @@ void ProxyServer::init_http_server() {
             }
         });
 
-    http_server_.set_http_handler<POST>(
+    http_server_->set_http_handler<POST>(
         "/v1/chat/completions",
         [&](coro_http_request& req, coro_http_response& resp) {
             const auto& request_body = req.get_queries();
             resp.add_header("Content-Type", "application/json");
-            std::string result = request_handler_.handleRequest(request_body);
+            LOG(INFO) << "reievce request /v1/chat/completions";
+            std::string result = request_handler_->handleRequest(request_body);
             if (result.size()) {
                 resp.set_status_and_content(status_type::ok, std::move(result));
             } else {
@@ -66,11 +73,41 @@ void ProxyServer::init_http_server() {
                                             "Failed to handle request.");
             }
         });
-    
-    http_server_.async_start();
-    std::cout << "HTTP mooncake_conductor server started on port: "
-              << http_server_.port();
+}
+
+void ProxyServer::start_server() {
+    http_server_->async_start();
+}
+
+void ProxyServer::stop_server() {
+    http_server_->stop();
 }
 
 }  // namespace mooncake_conductor
 
+
+void signal_handler(int signal) {
+    LOG(INFO) << "\nreceive signal: " << signal << ", start stoping the server...";
+    g_stop_flag.store(true);
+}
+
+
+void StartProxyServer(
+    const mooncake_conductor::ProxyServerArgs& config) {
+    std::signal(SIGINT, signal_handler);  // Ctrl+C
+    std::signal(SIGTERM, signal_handler); // kill
+    auto server = std::make_unique<mooncake_conductor::ProxyServer>(config);
+    server->start_server();
+    LOG(INFO) << "Async Starting mooncake-conductor server on " << config.host << ":" << config.port;
+    LOG(INFO) << "\n  press Ctrl+C to stop server..";
+    while (!g_stop_flag.load()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+    LOG(INFO) << " server STOP finished. ";
+}
+
+int main(int argc, char* argv[]) {
+    easylog::set_min_severity(easylog::Severity::WARN);
+    mooncake_conductor::ProxyServerArgs config{8000, "0.0.0.0"};
+    StartProxyServer(config);
+}
