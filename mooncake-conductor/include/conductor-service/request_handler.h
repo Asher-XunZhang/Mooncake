@@ -1,4 +1,3 @@
-// request_handler.h
 #pragma once
 
 // #include "cache_hit_distribution_collector.h"
@@ -20,9 +19,11 @@ private:
 public:
     RequestHandler(std::string collector, std::string load_collector);
     
-    // 处理传入的用户请求
     std::string handleRequest(const std::unordered_map<std::string_view, std::string_view>& request);
-    
+
+    std::pair<std::string, int> select_prefill_instance(
+        std::vector<std::pair<std::string, int>> prefiller_instances);
+
     // 批量处理请求
     void handleBatchRequests(const std::vector<std::string>& requests);
     

@@ -26,14 +26,19 @@ struct NodeMetrics {
 };
 
 struct ProxyServerArgs {
-    uint16_t port = 8000;
-    std::string host = "0.0.0.0";
-    int max_retries = 3;
-    double retry_delay = 0.001;
+    int port;
+    std::string host;
+    std::vector<std::string> prefiller_hosts;
+    std::vector<int> prefiller_ports;
+    std::vector<std::string> decoder_hosts;
+    std::vector<int> decoder_ports;
+    int max_retries;
+    double retry_delay;
+    std::vector<std::pair<std::string, int>> prefiller_instances;
+    std::vector<std::pair<std::string, int>> decoder_instances;
 };
 
 
-// 缓存匹配请求，承载一次请求的完整上下文信息
 struct CacheMatchRequest {
     std::string request_id;
     std::vector<int> prompt_tokens;

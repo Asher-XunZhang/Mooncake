@@ -49,7 +49,7 @@ public:
     std::vector<PNodeInfo> getNodesByModel(const std::string& model_name) const;
     std::optional<PNodeInfo> getNode(const std::string& node_id) const;
     
-    // 健康检查
+    // health check
     void removeStaleNodes();
     bool isNodeHealthy(const std::string& node_id) const;
     

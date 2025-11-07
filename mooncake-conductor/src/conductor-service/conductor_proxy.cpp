@@ -1,6 +1,7 @@
 #include "conductor_proxy.h"
 #include "request_handler.h"
 #include "conductor_types.h"
+#include "cli_parse.h"
 
 #include <glog/logging.h>
 #include <memory>
@@ -8,7 +9,6 @@
 #include <ylt/coro_http/coro_http_client.hpp>
 #include <ylt/coro_http/coro_http_server.hpp>
 #include <ylt/easylog/record.hpp>
-
 
 namespace mooncake_conductor {
 
@@ -24,6 +24,7 @@ ProxyServer::~ProxyServer() {
     http_server_->stop();
 }
 
+void ProxyServer::init_http_server() {
 //    curl -X POST http://localhost:8000/v1/completions \
 //      -H "Content-Type: application/json" \
 //      -d '{
@@ -41,7 +42,6 @@ ProxyServer::~ProxyServer() {
 //            "messages": [{"role": "user", "content": "Hello!"}],
 //            "max_tokens": 16
 //          }'
-void ProxyServer::init_http_server() {
     using namespace coro_http;
 
     http_server_->set_http_handler<POST>(
@@ -99,6 +99,8 @@ void StartProxyServer(
     auto server = std::make_unique<mooncake_conductor::ProxyServer>(config);
     server->start_server();
     LOG(INFO) << "Async Starting mooncake-conductor server on " << config.host << ":" << config.port;
+    // wait 1s to let server start
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     LOG(INFO) << "\n  press Ctrl+C to stop server..";
     while (!g_stop_flag.load()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -108,6 +110,14 @@ void StartProxyServer(
 
 int main(int argc, char* argv[]) {
     easylog::set_min_severity(easylog::Severity::WARN);
-    mooncake_conductor::ProxyServerArgs config{8000, "0.0.0.0"};
+    mooncake_conductor::ProxyServerArgs config;
+    try {
+        config = parse_args(argc, argv);
+    } catch (const std::exception& e) {
+        LOG(ERROR) << "Error parsing arguments: " << e.what();
+        return 1;
+    }
     StartProxyServer(config);
+    return 0;
 }
+//mooncake_conductor --port=8080 --prefiller_hosts="127.0.0.1,127.0.0.1" --prefiller_ports="8001,8002"
