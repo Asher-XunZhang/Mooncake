@@ -17,7 +17,10 @@ ProxyServer::ProxyServer(const ProxyServerArgs& config)
       host_(config.host),
       http_server_(std::make_unique<coro_http::coro_http_server>(4, config.port)),
       request_handler_(std::make_unique<RequestHandler>("12", "34")) {
-  init_http_server();
+    init_http_server();
+    // init proxy state
+    std::unique_ptr<ProxyState> proxy_state_ = std::make_unique<ProxyState>(
+        config.prefiller_instances, config.decoder_instances);
 }
 
 ProxyServer::~ProxyServer() {
@@ -91,7 +94,6 @@ void signal_handler(int signal) {
     g_stop_flag.store(true);
 }
 
-
 void StartProxyServer(
     const mooncake_conductor::ProxyServerArgs& config) {
     std::signal(SIGINT, signal_handler);  // Ctrl+C
@@ -101,7 +103,7 @@ void StartProxyServer(
     LOG(INFO) << "Async Starting mooncake-conductor server on " << config.host << ":" << config.port;
     // wait 1s to let server start
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    LOG(INFO) << "\n  press Ctrl+C to stop server..";
+    LOG(INFO) << "\n  press Ctrl+C to stop server..  ";
     while (!g_stop_flag.load()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }

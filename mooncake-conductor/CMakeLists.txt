@@ -4,6 +4,7 @@ project(MooncakeConductor)
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include/
     ${CMAKE_CURRENT_SOURCE_DIR}/include/conductor-service/
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/api_endpoint_adapter/
 )
 
 # Add subdirectories

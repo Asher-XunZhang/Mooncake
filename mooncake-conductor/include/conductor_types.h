@@ -13,10 +13,6 @@ struct SLORequirement {
     int priority = 1;
 };
 
-struct TokenizationResult {
-    std::vector<int> token_ids;
-    std::string model_name;
-};
 
 struct NodeMetrics {
     double gpu_utilization = 0.0;

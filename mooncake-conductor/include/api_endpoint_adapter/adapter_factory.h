@@ -9,9 +9,9 @@
 namespace mooncake_conductor {
 
 // ============ 类型擦除包装器 ============
-    template<typename AdapterType>
-    class EndpointAdapterWrapper : public IEndpointAdapter {
-        AdapterType adapter_;
+template<typename AdapterType>
+class EndpointAdapterWrapper : public IEndpointAdapter {
+    AdapterType adapter_;
 
     public:
         HttpRequest createTokenizationRequest(
@@ -63,10 +63,10 @@ namespace mooncake_conductor {
         std::string getFrameworkType() const override {
             return adapter_.getFrameworkType();
         }
-    };
+};
 
 // ============ 适配器工厂 ============
-    class EndpointAdapterFactory {
+class EndpointAdapterFactory {
     private:
         using AdapterCreator = std::function<std::unique_ptr<IEndpointAdapter>()>;
         using AdapterRegistry = std::unordered_map<std::string, AdapterCreator>;
@@ -118,11 +118,11 @@ namespace mooncake_conductor {
             static AdapterRegistry registry;
             return registry;
         }
-    };
+};
 
 // ============ 自动注册代理 ============
-    template<typename AdapterType>
-    class AutoRegisterProxy {
+template<typename AdapterType>
+class AutoRegisterProxy {
     private:
         struct AutoRegistrar {
             AutoRegistrar() {
@@ -134,6 +134,6 @@ namespace mooncake_conductor {
 
     public:
         AutoRegisterProxy() { (void)auto_registrar_; }
-    };
+};
 
 } // namespace mooncake_conductor

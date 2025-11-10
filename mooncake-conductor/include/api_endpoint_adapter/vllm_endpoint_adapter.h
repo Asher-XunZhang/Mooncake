@@ -1,6 +1,6 @@
-vllm_endpoint_adapter.h
 #pragma once
 #include "api_endpoint_adapter.h"
+#include "conductor_types.h"
 #include "adapter_factory.h"
 #include <sstream>
 #include <algorithm>
@@ -8,7 +8,7 @@ vllm_endpoint_adapter.h
 
 namespace mooncake_conductor {
 
-    class VLLMEndpointAdapter : public APIEndpointAdapter<VLLMEndpointAdapter> {
+class VLLMEndpointAdapter : public APIEndpointAdapter<VLLMEndpointAdapter> {
     public:
         // ============ 框架标识 ============
         static constexpr std::string_view getFrameworkTypeImpl() {
@@ -249,11 +249,11 @@ namespace mooncake_conductor {
             }
             return 0.0;
         }
-    };
+};
 
-    // ============ 自动注册触发 ============
-    namespace {
-        [[maybe_unused]] mooncake_conductor::AutoRegisterProxy<mooncake_conductor::VLLMEndpointAdapter> vllm_adapter_auto_registrar;
-    }
+// ============ 自动注册触发 ============
+namespace {
+    [[maybe_unused]] mooncake_conductor::AutoRegisterProxy<mooncake_conductor::VLLMEndpointAdapter> vllm_adapter_auto_registrar;
+}
 
 } // namespace mooncake_conductor

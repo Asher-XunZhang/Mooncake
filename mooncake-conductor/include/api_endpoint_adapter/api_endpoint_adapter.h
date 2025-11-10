@@ -1,6 +1,6 @@
-// api_endpoint_adapter.h
+
 #pragma once
-#include "common_types.h"
+#include "conductor_types.h"
 #include <string>
 #include <string_view>
 #include <memory>
@@ -8,7 +8,7 @@
 namespace mooncake_conductor {
 
 // ============ 您的接口设计实现 ============
-    class IEndpointAdapter {
+class IEndpointAdapter {
     public:
         virtual ~IEndpointAdapter() = default;
 
@@ -52,11 +52,11 @@ namespace mooncake_conductor {
                 std::string_view base_url) const = 0;
 
         [[nodiscard]] virtual std::string getFrameworkType() const = 0;
-    };
+};
 
 // ============ CRTP基类模板（实现您的接口） ============
-    template<typename Derived>
-    class APIEndpointAdapter : public IEndpointAdapter {
+template<typename Derived>
+class APIEndpointAdapter : public IEndpointAdapter {
     public:
         // === 编码功能实现 ===
         [[nodiscard]] HttpRequest createTokenizationRequest(
@@ -139,6 +139,6 @@ namespace mooncake_conductor {
         // CRTP辅助方法
         Derived& derived() { return static_cast<Derived&>(*this); }
         const Derived& derived() const { return static_cast<const Derived&>(*this); }
-    };
+};
 
 } // namespace mooncake_conductor
