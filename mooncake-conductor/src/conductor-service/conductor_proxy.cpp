@@ -16,11 +16,8 @@ ProxyServer::ProxyServer(const ProxyServerArgs& config)
     : port_(config.port),
       host_(config.host),
       http_server_(std::make_unique<coro_http::coro_http_server>(4, config.port)),
-      request_handler_(std::make_unique<RequestHandler>("12", "34")) {
+      request_handler_(std::make_unique<RequestHandler>(config, "12", "34")) {
     init_http_server();
-    // init proxy state
-    std::unique_ptr<ProxyState> proxy_state_ = std::make_unique<ProxyState>(
-        config.prefiller_instances, config.decoder_instances);
 }
 
 ProxyServer::~ProxyServer() {

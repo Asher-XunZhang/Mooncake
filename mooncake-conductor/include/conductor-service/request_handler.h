@@ -1,7 +1,9 @@
 #pragma once
 
 // #include "cache_hit_distribution_collector.h"
+#include "conductor_types.h"
 
+#include <ylt/coro_http/coro_http_client.hpp>
 #include <ylt/coro_http/coro_http_server.hpp>
 
 #include <unordered_set>
@@ -12,12 +14,12 @@ namespace mooncake_conductor {
 
 class LLMServerState {
 public:
-    LLMServerState(const std::string& host, int port) 
+    LLMServerState(const std::string& host, int port, std::chrono::seconds timeout) 
         : host(host), port(port), url("http://" + host + ":" + std::to_string(port) + "/v1") {
         client = std::make_unique<coro_http::coro_http_client>();
-        client->set_req_timeout(std::chrono::seconds(5));
+        client->set_req_timeout(timeout);
         client->add_header("Content-Type", "application/json");
-        url = "http://" + host + ":" + std::to_string(port) + "/v1";
+        // url = "http://" + host + ":" + std::to_string(port) + "/v1";
         // auto conn_result = client->connect(url);
         // if (conn_result.net_err) {
         //     std::cout << "连接测试失败: " << conn_result.net_err.message() << std::endl;
@@ -72,6 +74,7 @@ public:
     std::vector<ServerEntry> decoder_heap;
     mutable std::mutex prefiller_heap_mutex;
     mutable std::mutex decoder_heap_mutex;
+    std::chrono::seconds default_timeout{5};
 
     void abort_prefiller_request(size_t server_idx, const std::string& request_id);
 
@@ -85,9 +88,7 @@ public:
     //     update_prefiller_priority(idx);
     // }
 private:
-
     void update_prefiller_priority(size_t server_idx);
-
     void update_decoder_priority(size_t server_idx);
 
 };
@@ -95,9 +96,11 @@ private:
 
 class RequestHandler {
 public:
-    RequestHandler(std::string collector, std::string load_collector);
+    RequestHandler(const ProxyServerArgs cofig, std::string collector, std::string load_collector);
     
     std::string handleRequest(const std::unordered_map<std::string_view, std::string_view>& request);
+
+    void ping_llm_server(std::chrono::seconds timeout);
 
     std::pair<std::string, int> select_prefill_instance(
         std::vector<std::pair<std::string, int>> prefiller_instances);
@@ -109,7 +112,8 @@ public:
     
 private:
     // TODO use message_queue to decouple request_handler and proxy_server 
-    std::unique_ptr<int> message_queue_; 
+    std::unique_ptr<int> message_queue_;
+    std::unique_ptr<ProxyState> proxy_state_;
     // std::shared_ptr<CacheHitDistributionCollector> cache_collector_;
     // std::shared_ptr<LoadMetricsCollector> load_collector_;
     // void parseAndValidateRequest(const coro_http_request& request);

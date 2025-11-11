@@ -35,7 +35,6 @@ class ProxyServer {
     std::string host_;
     std::unique_ptr<coro_http::coro_http_server> http_server_;
     std::unique_ptr<RequestHandler> request_handler_;
-    std::unique_ptr<ProxyState> proxy_state_;
 };
 
 } // namespace mooncake-conductor

@@ -1,5 +1,6 @@
 #include "request_handler.h"
 #include "vllm_endpoint_adapter.h"
+#include <ylt/coro_http/coro_http_client.hpp>
 
 #include <unordered_map>
 #include <string>
@@ -11,11 +12,15 @@ namespace mooncake_conductor {
 ProxyState::ProxyState(const std::vector<ServerInstance>& prefiller_instances, 
                  const std::vector<ServerInstance>& decoder_instances) {
     for (const auto& [host, port] : prefiller_instances) {
-        prefillers.push_back(std::make_shared<LLMServerState>(host, port));
+        prefillers.push_back(std::make_shared<LLMServerState>(host, port, default_timeout));
     }
     
     for (const auto& [host, port] : decoder_instances) {
-        decoders.push_back(std::make_shared<LLMServerState>(host, port));
+        decoders.push_back(std::make_shared<LLMServerState>(host, port, default_timeout));
+    }
+    // TODO support xpyd
+    if (prefillers.size() != decoders.size()) {
+        LOG(ERROR) << "Prefiller and decoder instance counts can not match.";
     }
     
     for (size_t i = 0; i < prefillers.size(); ++i) {
@@ -101,9 +106,44 @@ void ProxyState::update_decoder_priority(size_t server_idx) {
     std::push_heap(decoder_heap.begin(), decoder_heap.end(), CompareServer());
 }
 
+RequestHandler::RequestHandler(const ProxyServerArgs config, std::string collector,
+                               std::string load_collector) {
+    proxy_state_ = std::make_unique<ProxyState>(config.prefiller_instances,
+                                                config.decoder_instances);
+    for (const auto& instance : config.prefiller_instances) {
+      LOG(INFO) << "Prefiller instance: " << instance.first << ":" << instance.second;
+    }
+    for (const auto& instance : config.decoder_instances) {
+      LOG(INFO) << "Decoder instance: " << instance.first << ":" << instance.second;
+    }
+    // step 1   test all instances (prefill & decoder)
+    ping_llm_server(std::chrono::milliseconds(500));
+    // step 2   
 
-RequestHandler::RequestHandler(std::string collector, std::string load_collector){
-    std::cout << "Finish init Requesthandler!!";
+    // step 3
+}
+
+void RequestHandler::ping_llm_server(std::chrono::seconds timeout) {
+    for (const auto& prefiller : proxy_state_->prefillers) {
+        std::string url = "http://" + prefiller->host + ":" + std::to_string(prefiller->port);
+        prefiller->client->set_req_timeout(std::chrono::seconds(timeout));
+        auto result = prefiller->client->get(url + "/health");
+        if (result.net_err || result.status != 200) {
+            LOG(ERROR) << "LLM prefill server " << url << " is unhealthy. Net err: " << result.net_err << ", Status: " << result.status;
+            break;
+        }
+        prefiller->client->set_req_timeout(proxy_state_->default_timeout);
+    }
+    for (const auto& decoder : proxy_state_->decoders) {
+        std::string url = "http://" + decoder->host + ":" + std::to_string(decoder->port);
+        decoder->client->set_req_timeout(std::chrono::seconds(timeout));
+        auto result = decoder->client->get(url + "/health");
+        if (result.net_err || result.status != 200) {
+            LOG(ERROR) << "LLM decode server " << url << " is unhealthy. Net err: " << result.net_err << ", Status: " << result.status;
+            break;
+        }
+        decoder->client->set_req_timeout(proxy_state_->default_timeout);
+    }
 }
 
 std::string RequestHandler::handleRequest(
