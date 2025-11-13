@@ -82,10 +82,58 @@ tl::expected<ReturnType, ErrorCode> MooncakeStoreCommunicationLayer::invoke_rpc(
         }());
 }
 
+
+template <auto ServiceMethod, typename ResultType, typename... Args>
+std::vector<tl::expected<ResultType, ErrorCode>> MooncakeStoreCommunicationLayer::invoke_batch_rpc(
+    size_t input_size, Args&&... args) {
+    auto pool = client_accessor_.GetClientPool();
+    if (!pool) {
+        LOG(ERROR) << "Client pool not available";
+        return tl::make_unexpected(ErrorCode::RPC_FAIL);
+    }
+
+    return async_simple::coro::syncAwait(
+        [&]() -> async_simple::coro::Lazy<
+                  std::vector<tl::expected<ResultType, ErrorCode>>> {
+            auto ret = co_await pool->send_request(
+                [&](coro_io::client_reuse_hint,
+                    coro_rpc::coro_rpc_client& client) {
+                    return client.send_request<ServiceMethod>(
+                        std::forward<Args>(args)...);
+                });
+            if (!ret.has_value()) {
+                LOG(ERROR) << "Client not available";
+                co_return std::vector<tl::expected<ResultType, ErrorCode>>(
+                    input_size, tl::make_unexpected(ErrorCode::RPC_FAIL));
+            }
+            auto result = co_await std::move(ret.value());
+            if (!result) {
+                LOG(ERROR) << "Batch RPC call failed: " << result.error().msg;
+                std::vector<tl::expected<ResultType, ErrorCode>> error_results;
+                error_results.reserve(input_size);
+                for (size_t i = 0; i < input_size; ++i) {
+                    error_results.emplace_back(
+                        tl::make_unexpected(ErrorCode::RPC_FAIL));
+                }
+                co_return error_results;
+            }
+            co_return result->result();
+        }());
+}
+
+
 tl::expected<GetReplicaListResponse, ErrorCode> 
 MooncakeStoreCommunicationLayer::GetReplicaList(const std::string& object_key) {
     auto result = invoke_rpc<&::mooncake::WrappedMasterService::GetReplicaList, 
                             GetReplicaListResponse>(object_key);
+    return result;
+}
+
+std::vector<tl::expected<GetReplicaListResponse, ErrorCode>>
+MooncakeStoreCommunicationLayer::BatchGetReplicaList(const std::vector<std::string>& object_keys) {
+    auto result = invoke_batch_rpc<&::mooncake::WrappedMasterService::BatchGetReplicaList,
+                                   GetReplicaListResponse>(object_keys.size(),
+                                                           object_keys);
     return result;
 }
 

@@ -32,6 +32,10 @@ public:
     [[nodiscard]] tl::expected<GetReplicaListResponse, ErrorCode>
     GetReplicaList(const std::string& object_key);
 
+    [[nodiscard]]
+    std::vector<tl::expected<GetReplicaListResponse, ErrorCode>>
+    BatchGetReplicaList(const std::vector<std::string>& object_keys);
+
 private:
     [[nodiscard]] ErrorCode Connect(const std::string& master_addr = kDefaultMasterAddress);
     
@@ -55,6 +59,10 @@ private:
 
     template <auto ServiceMethod, typename ReturnType, typename... Args>
     [[nodiscard]] tl::expected<ReturnType, ErrorCode> invoke_rpc(Args&&... args);
+
+    template <auto ServiceMethod, typename ResultType, typename... Args>
+    [[nodiscard]] std::vector<tl::expected<ResultType, ErrorCode>>
+    invoke_batch_rpc(size_t input_size, Args&&... args);
 
     std::string master_addr_;
     std::shared_ptr<coro_io::client_pools<coro_rpc::coro_rpc_client>> client_pools_;
