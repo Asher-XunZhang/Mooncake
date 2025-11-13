@@ -117,9 +117,10 @@ RequestHandler::RequestHandler(const ProxyServerArgs config, std::string collect
       LOG(INFO) << "Decoder instance: " << instance.first << ":" << instance.second;
     }
     // step 1   test all instances (prefill & decoder)
-    ping_llm_server(std::chrono::milliseconds(500));
-    // step 2   
-
+    ping_llm_server(std::chrono::duration_cast<std::chrono::seconds>(
+        std::chrono::milliseconds(500)));
+    // step 2
+    
     // step 3
 }
 
