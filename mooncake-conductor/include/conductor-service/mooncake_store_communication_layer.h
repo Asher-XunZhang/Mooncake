@@ -1,56 +1,67 @@
 // mooncake_store_communication_layer.h
 #pragma once
-#include "key_distribution.h"
-#include "cache_operation_result.h"
-#include <grpcpp/grpcpp.h>
+
+#include "rpc_types.h"
+
+#include <ylt/util/tl/expected.hpp>
+#include <ylt/coro_rpc/coro_rpc_client.hpp>
+#include <ylt/coro_io/client_pool.hpp>
+#include <async_simple/coro/Mutex.h>
+
+#include <string>
+#include <vector>
+#include <memory>
+#include <mutex>
+#include <shared_mutex>
+
+using ErrorCode = ::mooncake::ErrorCode;
+using GetReplicaListResponse = ::mooncake::GetReplicaListResponse; 
+
+namespace mooncake_conductor {
+
+static const std::string kDefaultMasterAddress = "localhost:50051";
 
 class MooncakeStoreCommunicationLayer {
-private:
-    std::shared_ptr<grpc::Channel> channel_;
-    std::unique_ptr<MooncakeStore::Stub> stub_;
-    std::chrono::milliseconds timeout_;
-    RetryPolicy retry_policy_;
-    
-    // 连接池和性能优化
-    std::shared_ptr<ConnectionPool> connection_pool_;
-    std::shared_ptr<RequestBatcher> request_batcher_;
-
 public:
-    MooncakeStoreCommunicationLayer(const std::string& server_address,
-                                   std::chrono::milliseconds timeout = std::chrono::seconds(30));
-    
-    // 批量查询键分布
-    std::vector<KeyDistribution> batchGetKeyDistribution(
-        const std::vector<std::string>& physical_keys,
-        const std::string& target_node = "");
-    
-    // 单个键查询（兼容性接口）
-    KeyDistribution getKeyDistribution(const std::string& physical_key,
-                                      const std::string& target_node = "");
-    
-    // 缓存操作
-    CacheOperationResult putCache(const std::string& key, 
-                                 const std::vector<uint8_t>& data,
-                                 std::chrono::seconds ttl = std::chrono::hours(24));
-    
-    CacheOperationResult getCache(const std::string& key);
-    
-    CacheOperationResult deleteCache(const std::string& key);
-    
-    // 集群管理操作
-    ClusterInfo getClusterInfo();
-    bool migrateCache(const std::string& source_key, const std::string& target_node);
-    
-    // 连接管理
-    bool isConnected() const;
-    void reconnect();
-    void setTimeout(std::chrono::milliseconds timeout);
-    
-    // 性能统计
-    CommunicationStats getCommunicationStats() const;
+    explicit MooncakeStoreCommunicationLayer(const std::string& master_addr = kDefaultMasterAddress);
+    ~MooncakeStoreCommunicationLayer();
+
+    MooncakeStoreCommunicationLayer(const MooncakeStoreCommunicationLayer&) = delete;
+    MooncakeStoreCommunicationLayer& operator=(const MooncakeStoreCommunicationLayer&) = delete;
+
+    [[nodiscard]] tl::expected<GetReplicaListResponse, ErrorCode>
+    GetReplicaList(const std::string& object_key);
 
 private:
-    grpc::Status executeWithRetry(std::function<grpc::Status()> operation);
-    std::vector<KeyDistribution> processBatchResponse(const BatchDistributionResponse& response);
-    void updatePerformanceMetrics(const grpc::Status& status, std::chrono::milliseconds duration);
+    [[nodiscard]] ErrorCode Connect(const std::string& master_addr = kDefaultMasterAddress);
+    
+    class RpcClientAccessor {
+    public:
+        void SetClientPool(std::shared_ptr<coro_io::client_pool<coro_rpc::coro_rpc_client>> client_pool) {
+            std::lock_guard<std::shared_mutex> lock(client_mutex_);
+            client_pool_ = client_pool;
+        }
+
+        std::shared_ptr<coro_io::client_pool<coro_rpc::coro_rpc_client>>
+        GetClientPool() {
+            std::shared_lock<std::shared_mutex> lock(client_mutex_);
+            return client_pool_;
+        }
+
+    private:
+        mutable std::shared_mutex client_mutex_;
+        std::shared_ptr<coro_io::client_pool<coro_rpc::coro_rpc_client>> client_pool_;
+    };
+
+    template <auto ServiceMethod, typename ReturnType, typename... Args>
+    [[nodiscard]] tl::expected<ReturnType, ErrorCode> invoke_rpc(Args&&... args);
+
+    std::string master_addr_;
+    std::shared_ptr<coro_io::client_pools<coro_rpc::coro_rpc_client>> client_pools_;
+    RpcClientAccessor client_accessor_;
+    
+    mutable Mutex connect_mutex_;
+    std::string client_addr_param_ GUARDED_BY(connect_mutex_);
 };
+
+} // namespace mooncake_conductor

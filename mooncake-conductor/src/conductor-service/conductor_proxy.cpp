@@ -2,13 +2,15 @@
 #include "request_handler.h"
 #include "conductor_types.h"
 #include "cli_parse.h"
+#include "mooncake_store_communication_layer.h"
 
 #include <glog/logging.h>
-#include <memory>
-#include <string>
 #include <ylt/coro_http/coro_http_client.hpp>
 #include <ylt/coro_http/coro_http_server.hpp>
 #include <ylt/easylog/record.hpp>
+
+#include <memory>
+#include <string>
 
 namespace mooncake_conductor {
 
@@ -91,8 +93,7 @@ void signal_handler(int signal) {
     g_stop_flag.store(true);
 }
 
-void StartProxyServer(
-    const mooncake_conductor::ProxyServerArgs& config) {
+void StartProxyServer(const mooncake_conductor::ProxyServerArgs& config) {
     std::signal(SIGINT, signal_handler);  // Ctrl+C
     std::signal(SIGTERM, signal_handler); // kill
     auto server = std::make_unique<mooncake_conductor::ProxyServer>(config);
@@ -101,6 +102,19 @@ void StartProxyServer(
     // wait 1s to let server start
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     LOG(INFO) << "\n  press Ctrl+C to stop server..  ";
+    LOG(INFO) << "\n  尝试第一次读取Mooncake Store..  ";
+    mooncake_conductor::MooncakeStoreCommunicationLayer mscl{};
+    std::string s = "111";
+    auto result = mscl.GetReplicaList(s);
+    if (result.has_value()) {
+        std::cout << "成功获取副本列表！" << std::endl;
+        const auto& response = result.value();
+        std::cout << "副本数量: " << response.replicas.size() << std::endl;
+    } else {
+        std::cout << "获取副本列表失败，错误码: " 
+                    << mooncake::toString(result.error()) << std::endl;
+    }
+
     while (!g_stop_flag.load()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
@@ -117,6 +131,15 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     StartProxyServer(config);
+    
+    
+
+    // if(mscl.IsConnected()) {
+    //     LOG(INFO) << "Connductor has connected to Store";
+    // }
+
+
+
     return 0;
 }
 //mooncake_conductor --port=8080 --prefiller_hosts="127.0.0.1,127.0.0.1" --prefiller_ports="8001,8002"
