@@ -2,6 +2,8 @@
 #include "request_handler.h"
 #include "conductor_types.h"
 #include "cli_parse.h"
+#include "hash.h"
+#include "block_serializer.h"
 #include "mooncake_store_communication_layer.h"
 
 #include <glog/logging.h>
@@ -114,6 +116,12 @@ void StartProxyServer(const mooncake_conductor::ProxyServerArgs& config) {
         std::cout << "获取副本列表失败，错误码: " 
                     << mooncake::toString(result.error()) << std::endl;
     }
+
+    mooncake_conductor::verify_none_hash();
+    std::cout << std::endl;
+    mooncake_conductor::run_consistency_test();
+
+    mooncake_conductor::test_serializer();
 
     while (!g_stop_flag.load()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));

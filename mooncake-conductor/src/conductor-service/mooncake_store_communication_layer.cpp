@@ -87,10 +87,6 @@ template <auto ServiceMethod, typename ResultType, typename... Args>
 std::vector<tl::expected<ResultType, ErrorCode>> MooncakeStoreCommunicationLayer::invoke_batch_rpc(
     size_t input_size, Args&&... args) {
     auto pool = client_accessor_.GetClientPool();
-    if (!pool) {
-        LOG(ERROR) << "Client pool not available";
-        return tl::make_unexpected(ErrorCode::RPC_FAIL);
-    }
 
     return async_simple::coro::syncAwait(
         [&]() -> async_simple::coro::Lazy<
