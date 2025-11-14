@@ -61,7 +61,9 @@ def get_request_block_hasher(
     """
     Returns a function which computes the list of un-computed block hashes
     of a request."""
-    start_token_idx = len(request.block_hashes) * block_size # 直接初始化为0就行
+    # 直接初始化为0就行, 对于conductor，请求的调度是一次性的
+    # start_token_idx = len(request.block_hashes) * block_size
+    start_token_idx = 0
     
     num_tokens = request.num_tokens # 输入的token个数
 
@@ -69,9 +71,10 @@ def get_request_block_hasher(
         # Early stop when there no new full blocks created.
         return []
 
-    prev_block_hash_value = (
-        request.block_hashes[-1] if request.block_hashes else None   # 直接设置为None就行
-    )
+    # prev_block_hash_value = (
+    #     request.block_hashes[-1] if request.block_hashes else None   # 直接设置为None就行
+    # )
+    prev_block_hash_value = None
     new_block_hashes: list[BlockHash] = []
     while True:
         end_token_idx = start_token_idx + block_size
@@ -90,3 +93,17 @@ def get_request_block_hasher(
         prev_block_hash_value = block_hash
 
     return new_block_hashes
+
+class Request:
+    def __init__(self, num_tokens: int, block_hashes=None, all_token_ids=None):
+        self.num_tokens = num_tokens
+        self.block_hashes = block_hashes
+        self.all_token_ids = all_token_ids
+
+
+if __name__ == "__main__":
+    # 假设block_size为5, token_id_list 为 [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    token_id_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    request = Request(num_tokens=len(token_id_list), all_token_ids=token_id_list)
+    block_hashes = get_request_block_hasher(request, block_size=5)
+    print(block_hashes)
