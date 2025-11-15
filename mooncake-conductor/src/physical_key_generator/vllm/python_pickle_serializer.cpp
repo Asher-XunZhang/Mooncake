@@ -17,7 +17,8 @@ public:
     GilGuard& operator=(const GilGuard&) = delete;
 };
 
-bool BoostPythonPickleSerializer::python_initialized = false;
+std::atomic<bool> BoostPythonPickleSerializer::python_initialized{false};
+std::mutex BoostPythonPickleSerializer::init_mutex;
 
 void BoostPythonPickleSerializer::handle_python_error(
     const std::string& operation, const char* file, int line) {
@@ -26,13 +27,10 @@ void BoostPythonPickleSerializer::handle_python_error(
     
     try {
         if (PyErr_Occurred()) {
-            PyErr_Print();
-            
             py::object sys_module = py::import("sys");
             py::object exc_info = sys_module.attr("exc_info")();
             py::object exc_type = exc_info[0];
             py::object exc_value = exc_info[1];
-            py::object exc_traceback = exc_info[2];
             
             std::string exc_type_str = py::extract<std::string>(
                 py::str(exc_type.attr("__name__")));
@@ -70,6 +68,7 @@ BoostPythonPickleSerializer::BoostPythonPickleSerializer(
     
     other.pickle_module = boost::python::object();
     other.dumps_func = boost::python::object();
+    other.gil_state = static_cast<PyGILState_STATE>(-1);
 }
 
 BoostPythonPickleSerializer& BoostPythonPickleSerializer::operator=(
@@ -83,29 +82,37 @@ BoostPythonPickleSerializer& BoostPythonPickleSerializer::operator=(
         
         other.pickle_module = boost::python::object();
         other.dumps_func = boost::python::object();
+        other.gil_state = static_cast<PyGILState_STATE>(-1);
     }
     return *this;
 }
 
 void BoostPythonPickleSerializer::initialize_python() {
-    if (!python_initialized) {
+    {
+        std::lock_guard<std::mutex> lock(init_mutex);
+        if (python_initialized.load()) {
+            gil_state = PyGILState_Ensure();
+            return;
+        }
+        
         try {
-
-            Py_Initialize();
             if (!Py_IsInitialized()) {
-                throw std::runtime_error("Failed to initialize Python interpreter");
+                Py_Initialize();
+                if (!Py_IsInitialized()) {
+                    throw std::runtime_error("Failed to initialize Python interpreter");
+                }
             }
             
-            PyEval_InitThreads();
+            #if PY_VERSION_HEX < 0x03070000
+                PyEval_InitThreads();
+            #endif
             
-            boost::python::handle<> ignored(boost::python::allow_null((PyObject*)nullptr));
             boost::python::object main_module = boost::python::import("__main__");
-            boost::python::object main_namespace = main_module.attr("__dict__");
             
             pickle_module = boost::python::import("pickle");
             dumps_func = pickle_module.attr("dumps");
             
-            python_initialized = true;
+            python_initialized.store(true);
             std::cout << "Python interpreter and Boost.Python initialized successfully\n";
             
         } catch (const boost::python::error_already_set&) {
@@ -118,18 +125,19 @@ void BoostPythonPickleSerializer::initialize_python() {
 
 void BoostPythonPickleSerializer::cleanup_python() noexcept {
     try {
-        if (Py_IsInitialized()) {
+        if (Py_IsInitialized() && 
+            gil_state != static_cast<PyGILState_STATE>(-1)) {
             PyGILState_Release(gil_state);
+            gil_state = static_cast<PyGILState_STATE>(-1);
         }
     } catch (...) {
-
     }
 }
 
 std::vector<uint8_t> BoostPythonPickleSerializer::serialize(
     const std::vector<uint8_t>& parent_hash,
     const std::vector<int64_t>& token_ids,
-    const std::vector<int64_t>* extra_keys) {
+    std::optional<std::vector<int64_t>> extra_keys) {
     
     GilGuard gil_guard;
     
@@ -156,16 +164,16 @@ std::vector<uint8_t> BoostPythonPickleSerializer::serialize(
 
 boost::python::object BoostPythonPickleSerializer::bytes_to_python(
     const std::vector<uint8_t>& data) {
-    
     PyObject* py_bytes = PyBytes_FromStringAndSize(
-        reinterpret_cast<const char*>(data.data()), data.size());
+        reinterpret_cast<const char*>(data.data()), 
+        static_cast<Py_ssize_t>(data.size())
+    );
     
     if (!py_bytes) {
-        throw std::runtime_error("Failed to create Python bytes object");
+        handle_python_error("PyBytes_FromStringAndSize");
     }
     
-    boost::python::handle<> bytes_handle(py_bytes);
-    return boost::python::object(bytes_handle);
+    return boost::python::object(boost::python::handle<>(py_bytes));
 }
 
 boost::python::object BoostPythonPickleSerializer::int64_vector_to_python_tuple(
@@ -176,21 +184,30 @@ boost::python::object BoostPythonPickleSerializer::int64_vector_to_python_tuple(
         py_list.append(value);
     }
     
-    boost::python::object py_tuple = boost::python::tuple(py_list);
-    return py_tuple;
+    return boost::python::tuple(py_list);
 }
 
-std::vector<uint8_t> BoostPythonPickleSerializer::python_to_bytes(const boost::python::object& obj) {
-    PyObject* py_obj = obj.ptr();
-    if (!PyBytes_Check(py_obj)) 
+std::vector<uint8_t> BoostPythonPickleSerializer::python_to_bytes(
+    const boost::python::object& obj) {
+    boost::python::object local_copy(obj); 
+    
+    PyObject* py_obj = local_copy.ptr();
+    
+    if (!PyBytes_Check(py_obj)) {
         throw std::runtime_error("Object is not a bytes type");
+    }
+
+    Py_ssize_t length = PyBytes_Size(py_obj);
+    const char* buffer = PyBytes_AsString(py_obj);
     
-    char* buffer;
-    Py_ssize_t length;
-    if (PyBytes_AsStringAndSize(py_obj, &buffer, &length) == -1)
-        handle_python_error("PyBytes_AsStringAndSize");
+    if (!buffer) {
+        handle_python_error("PyBytes_AsString failed");
+    }
     
-    return {reinterpret_cast<uint8_t*>(buffer), reinterpret_cast<uint8_t*>(buffer) + length};
+    return std::vector<uint8_t>(
+        reinterpret_cast<const uint8_t*>(buffer),
+        reinterpret_cast<const uint8_t*>(buffer) + length
+    );
 }
 
 }

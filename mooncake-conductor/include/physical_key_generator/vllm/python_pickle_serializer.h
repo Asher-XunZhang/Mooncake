@@ -5,6 +5,9 @@
 #include <string>
 #include <stdexcept>
 #include <memory>
+#include <optional>
+#include <atomic>
+#include <mutex>
 
 #include <boost/python.hpp>
 
@@ -12,7 +15,8 @@ namespace mooncake_conductor {
 
 class BoostPythonPickleSerializer {
 private:
-    static bool python_initialized;
+    static std::atomic<bool> python_initialized;
+    static std::mutex init_mutex;
     
     PyGILState_STATE gil_state;
     
@@ -29,19 +33,19 @@ private:
 public:
     BoostPythonPickleSerializer();
     ~BoostPythonPickleSerializer();
-
+    
     BoostPythonPickleSerializer(const BoostPythonPickleSerializer&) = delete;
     BoostPythonPickleSerializer& operator=(const BoostPythonPickleSerializer&) = delete;
-
+    
     BoostPythonPickleSerializer(BoostPythonPickleSerializer&& other) noexcept;
     BoostPythonPickleSerializer& operator=(BoostPythonPickleSerializer&& other) noexcept;
-
+    
     std::vector<uint8_t> serialize(
         const std::vector<uint8_t>& parent_hash,
         const std::vector<int64_t>& token_ids,
-        const std::vector<int64_t>* extra_keys = nullptr);
-
-    static boost::python::object bytes_to_python(const std::vector<uint8_t>& data);
+        std::optional<std::vector<int64_t>> extra_keys = std::nullopt);
+    
+    boost::python::object bytes_to_python(const std::vector<uint8_t>& data);
     static boost::python::object int64_vector_to_python_tuple(const std::vector<int64_t>& data);
     std::vector<uint8_t> python_to_bytes(const boost::python::object& obj);
 };
