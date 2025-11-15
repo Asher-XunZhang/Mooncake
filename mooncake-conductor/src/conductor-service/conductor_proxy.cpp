@@ -6,6 +6,13 @@
 #include "block_serializer.h"
 #include "mooncake_store_communication_layer.h"
 
+#include "vllm_endpoint_adapter.h"
+#include "adapter_factory.h"
+#include <iostream>
+#include <cassert>
+#include <nlohmann/json.hpp>
+
+
 #include <glog/logging.h>
 #include <ylt/coro_http/coro_http_client.hpp>
 #include <ylt/coro_http/coro_http_server.hpp>
@@ -191,6 +198,120 @@ void test_serializer() {
     }
 }
 
+void test_api_endpoint_adapter() {
+    // 1. Verify adapter registration
+    auto adapter = mooncake_conductor::EndpointAdapterFactory::createAdapter("vllm");
+    assert(adapter && "VLLM adapter should be registered");
+    std::cout << "[TEST] Adapter created successfully" << std::endl;
+
+    const std::string base_url = "http://localhost:8000";
+
+    // 2. Verify health endpoint
+    std::string health_ep = adapter->buildHealthEndpoint(base_url);
+    assert(health_ep == "http://localhost:8000/health" && "Health endpoint mismatch");
+    
+    auto health_req = adapter->createHealthRequest(health_ep);
+    assert(health_req.url == "http://localhost:8000/health" && "Health URL mismatch");
+    assert(health_req.method == "GET" && "Health method mismatch");
+    std::cout << "[TEST] Health endpoint verified" << std::endl;
+
+    // 3. Verify health response parsing
+    std::string healthy_resp = R"({"status": "healthy", "version": "0.3.2"})";
+    assert(adapter->parseHealthResponse(healthy_resp) && "Should parse as healthy");
+    
+    std::string unhealthy_resp = R"({"status": "unhealthy"})";
+    assert(!adapter->parseHealthResponse(unhealthy_resp) && "Should parse as unhealthy");
+    
+    std::string healthy_resp_alt = R"({"healthy": true})";
+    assert(adapter->parseHealthResponse(healthy_resp_alt) && "Should parse alternative healthy format");
+    std::cout << "[TEST] Health response parsing verified" << std::endl;
+
+    // 4. Verify tokenization request
+    std::string tokenize_ep = adapter->buildTokenizeEndpoint(base_url);
+    assert(tokenize_ep == "http://localhost:8000/v1/tokenize" && "Tokenize endpoint mismatch");
+    
+    auto tokenize_req = adapter->createTokenizationRequest("Hello, vLLM!", tokenize_ep);
+    assert(tokenize_req.url == tokenize_ep && "Tokenize URL mismatch");
+    assert(tokenize_req.method == "POST" && "Tokenize method mismatch");
+    assert(tokenize_req.headers.at("Content-Type") == "application/json" && "Content-Type mismatch");
+    assert(tokenize_req.headers.at("Accept") == "application/json" && "Accept header mismatch");
+    
+    // Verify request body using nlohmann/json
+    auto req_body = nl::json::parse(tokenize_req.body);
+    assert(req_body["text"] == "Hello, vLLM!" && "Request text mismatch");
+    assert(req_body["add_special_tokens"] == false && "Special tokens flag mismatch");
+    std::cout << "[TEST] Tokenization request verified" << std::endl;
+
+    // 5. Verify tokenization response
+    std::string tokenize_resp = R"({
+        "tokens": [1, 15043, 1917, 2],
+        "model": "meta-llama/Llama-2-7b-chat-hf",
+        "truncated": false
+    })";
+    
+    auto tokenize_result = adapter->parseTokenizationResponse(tokenize_resp);
+    std::vector<int> expected_vec{1, 15043, 1917, 2};
+    assert(tokenize_result.token_ids == expected_vec && "Token IDs mismatch");
+    assert(tokenize_result.token_count == 4 && "Token count mismatch");
+    assert(tokenize_result.model_name == "meta-llama/Llama-2-7b-chat-hf" && "Model name mismatch");
+    assert(!tokenize_result.truncated && "Truncated flag mismatch");
+    assert(tokenize_result.error_message.empty() && "Should have no error");
+    std::cout << "[TEST] Tokenization response verified" << std::endl;
+
+    // 6. Verify config endpoint
+    std::string config_ep = adapter->buildConfigEndpoint(base_url);
+    assert(config_ep == "http://localhost:8000/v1/models" && "Config endpoint mismatch");
+    
+    auto config_req = adapter->createConfigRequest(config_ep);
+    assert(config_req.url == config_ep && "Config URL mismatch");
+    assert(config_req.method == "GET" && "Config method mismatch");
+    std::cout << "[TEST] Config request verified" << std::endl;
+
+    // 7. Verify config response (vLLM format)
+    std::string config_resp = R"({
+        "data": [{
+            "id": "meta-llama/Llama-2-7b-chat-hf",
+            "max_model_len": 4096,
+            "dtype": "float16",
+            "block_size": 16
+        }]
+    })";
+    
+    auto engine_config = adapter->parseConfigResponse(config_resp);
+    assert(engine_config.model_name == "meta-llama/Llama-2-7b-chat-hf" && "Model name mismatch");
+    assert(engine_config.max_sequence_length == 4096 && "Max sequence length mismatch");
+    assert(engine_config.dtype == "float16" && "DType mismatch");
+    assert(engine_config.block_size == 16 && "Block size mismatch");
+    std::cout << "[TEST] Config response verified" << std::endl;
+
+    // 8. Verify Prometheus metrics parsing
+    std::string prometheus_metrics = R"(
+# HELP vllm:gpu_utilization GPU utilization
+# TYPE vllm:gpu_utilization gauge
+vllm:gpu_utilization{device="0"} 75.5
+)";
+    
+    auto metrics_req = adapter->createMetricsRequest(adapter->buildMetricsEndpoint(base_url));
+    auto metrics_result = adapter->parseMetricsResponse(prometheus_metrics);
+    assert(std::abs(metrics_result.gpu_utilization - 0.755) < 1e-6 && "GPU utilization parsing failed");
+    assert(metrics_result.is_healthy && "Should be healthy with valid metrics");
+    std::cout << "[TEST] Prometheus metrics verified" << std::endl;
+
+    std::cout << "\n[SUCCESS] All adapter tests passed!" << std::endl;
+}
+
+void test_main() {
+    verify_none_hash();
+    std::cout << std::endl;
+    run_consistency_test();
+    std::cout << std::endl;
+    test_serializer();
+    std::cout << std::endl;
+    test_api_endpoint_adapter();
+    std::cout << std::endl;
+}
+
+
 }
 
 
@@ -221,11 +342,7 @@ void StartProxyServer(const mooncake_conductor::ProxyServerArgs& config) {
                     << mooncake::toString(result.error()) << std::endl;
     }
 
-    mooncake_conductor::verify_none_hash();
-    std::cout << std::endl;
-    mooncake_conductor::run_consistency_test();
-
-    mooncake_conductor::test_serializer();
+    mooncake_conductor::test_main();
 
     while (!g_stop_flag.load()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));

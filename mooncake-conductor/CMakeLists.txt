@@ -22,14 +22,29 @@ foreach(dir ${ALL_HEADER_DIRS})
 endforeach()
 list(REMOVE_DUPLICATES INCLUDE_DIRS)
 
+# 获取项目根目录 (Mooncake/)
+set(THIRDPARTY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../thirdparties)
+
+# 验证 nlohmann/json.hpp 是否存在
+if(NOT EXISTS ${THIRDPARTY_DIR}/nlohmann/json.hpp)
+    message(WARNING "nlohmann/json.hpp not found at ${THIRDPARTY_DIR}/nlohmann/json.hpp")
+    message(WARNING "Please ensure thirdparty directory structure is correct:")
+    message(WARNING "  Mooncake/")
+    message(WARNING "  ├── thirdparty/")
+    message(WARNING "  │   └── nlohmann/")
+    message(WARNING "  │       └── json.hpp")
+endif()
 
 add_executable(mooncake_conductor ${MOONCAKE_CONDUCTOR_SOURCES})
+
+
 
 target_include_directories(mooncake_conductor PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${INCLUDE_DIRS}
     ${Python3_INCLUDE_DIRS}
     ${Boost_INCLUDE_DIRS}
+    ${THIRDPARTY_DIR}
 )
 
 target_include_directories(mooncake_conductor PRIVATE
