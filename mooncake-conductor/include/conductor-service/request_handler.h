@@ -100,7 +100,7 @@ public:
     
     std::string handleRequest(const std::unordered_map<std::string_view, std::string_view>& request);
 
-    void ping_llm_server(std::chrono::seconds timeout);
+    void ping_llm_server(std::chrono::milliseconds timeout);
 
     std::pair<std::string, int> select_prefill_instance(
         std::vector<std::pair<std::string, int>> prefiller_instances);
