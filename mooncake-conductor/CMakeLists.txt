@@ -37,10 +37,9 @@ endif()
 
 add_executable(mooncake_conductor ${MOONCAKE_CONDUCTOR_SOURCES})
 
-
-
 target_include_directories(mooncake_conductor PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${INCLUDE_DIRS}
     ${Python3_INCLUDE_DIRS}
     ${Boost_INCLUDE_DIRS}
@@ -49,9 +48,9 @@ target_include_directories(mooncake_conductor PRIVATE
 
 target_include_directories(mooncake_conductor PRIVATE
     ${CMAKE_SOURCE_DIR}/mooncake-store/include
+    ${CMAKE_SOURCE_DIR}/mooncake-store/include/cachelib_memory_allocator
     ${CMAKE_SOURCE_DIR}/mooncake-store/include/cachelib_memory_allocator/include
     ${CMAKE_SOURCE_DIR}/mooncake-store/include/cachelib_memory_allocator/fake_include
-    ${CMAKE_SOURCE_DIR}/mooncake-store/include/cachelib_memory_allocator
     ${CMAKE_SOURCE_DIR}/mooncake-store/include/cachelib_memory_allocator/common
     ${CMAKE_SOURCE_DIR}/mooncake-store/include/hf3fs
     ${CMAKE_SOURCE_DIR}/mooncake-store/include/offset_allocator

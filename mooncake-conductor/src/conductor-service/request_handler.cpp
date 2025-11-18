@@ -1,5 +1,4 @@
 #include "request_handler.h"
-#include "vllm_endpoint_adapter.h"
 #include "conductor_utils.h"
 #include <ylt/coro_http/coro_http_client.hpp>
 

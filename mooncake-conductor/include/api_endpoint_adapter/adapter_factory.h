@@ -1,11 +1,17 @@
 #pragma once
 #include "api_endpoint_adapter.h"
+#include "adapter_initializer.h"
+
+#include <glog/logging.h>
+
 #include <memory>
 #include <unordered_map>
 #include <iostream>
 #include <functional>
 #include <vector>
 #include <string>
+#include <sstream>
+#include <string_view>
 
 namespace mooncake_conductor {
 
@@ -14,57 +20,57 @@ class EndpointAdapterWrapper : public IEndpointAdapter {
     AdapterType adapter_;
 
 public:
-    HttpRequest createTokenizationRequest(
-        std::string_view prompt, std::string_view endpoint) const {
+    [[nodiscard]] HttpRequest createTokenizationRequest(
+        std::string_view prompt, std::string_view endpoint) const override {
         return adapter_.createTokenizationRequest(prompt, endpoint);
     }
 
-    TokenizationResult parseTokenizationResponse(
-        std::string_view raw_response) const {
+    [[nodiscard]] TokenizationResult parseTokenizationResponse(
+        std::string_view raw_response) const override {
         return adapter_.parseTokenizationResponse(raw_response);
     }
 
-    HttpRequest createConfigRequest(std::string_view endpoint) const {
+    [[nodiscard]] HttpRequest createConfigRequest(std::string_view endpoint) const override {
         return adapter_.createConfigRequest(endpoint);
     }
 
-    EngineConfig parseConfigResponse(std::string_view raw_response) const {
+    [[nodiscard]] EngineConfig parseConfigResponse(std::string_view raw_response) const override {
         return adapter_.parseConfigResponse(raw_response);
     }
 
-    HttpRequest createMetricsRequest(std::string_view endpoint) const {
+    [[nodiscard]] HttpRequest createMetricsRequest(std::string_view endpoint) const override {
         return adapter_.createMetricsRequest(endpoint);
     }
 
-    LoadMetrics parseMetricsResponse(std::string_view raw_response) const {
+    [[nodiscard]] LoadMetrics parseMetricsResponse(std::string_view raw_response) const override {
         return adapter_.parseMetricsResponse(raw_response);
     }
 
-    HttpRequest createHealthRequest(std::string_view endpoint) const {
+    [[nodiscard]] HttpRequest createHealthRequest(std::string_view endpoint) const override {
         return adapter_.createHealthRequest(endpoint);
     }
 
-    bool parseHealthResponse(std::string_view raw_response) const {
+    [[nodiscard]] bool parseHealthResponse(std::string_view raw_response) const override {
         return adapter_.parseHealthResponse(raw_response);
     }
 
-    std::string buildConfigEndpoint(std::string_view base_url) const {
+    [[nodiscard]] std::string buildConfigEndpoint(std::string_view base_url) const override {
         return adapter_.buildConfigEndpoint(base_url);
     }
 
-    std::string buildMetricsEndpoint(std::string_view base_url) const {
+    [[nodiscard]] std::string buildMetricsEndpoint(std::string_view base_url) const override {
         return adapter_.buildMetricsEndpoint(base_url);
     }
 
-    std::string buildTokenizeEndpoint(std::string_view base_url) const {
+    [[nodiscard]] std::string buildTokenizeEndpoint(std::string_view base_url) const override {
         return adapter_.buildTokenizeEndpoint(base_url);
     }
 
-    std::string buildHealthEndpoint(std::string_view base_url) const {
+    [[nodiscard]] std::string buildHealthEndpoint(std::string_view base_url) const override {
         return adapter_.buildHealthEndpoint(base_url);
     }
 
-    std::string getFrameworkType() const {
+    [[nodiscard]] std::string getFrameworkType() const override {
         return adapter_.getFrameworkType();
     }
 };
@@ -79,6 +85,9 @@ private:
         return registry;
     }
 
+    template<typename AdapterType>
+    friend void registerAdapterImpl(std::string_view framework_type);
+
 public:
     template<typename AdapterType>
     static void registerAdapter(std::string_view framework_type) {
@@ -86,10 +95,12 @@ public:
         getRegistry()[type_str] = []() {
             return std::make_unique<EndpointAdapterWrapper<AdapterType>>();
         };
-        std::cout << "[AdapterFactory] Registered: " << type_str << std::endl;
+        LOG(INFO) << "[AdapterFactory] Registered: " << type_str;
     }
 
     static std::unique_ptr<IEndpointAdapter> createAdapter(std::string_view framework_type) {
+        internal::AdapterInitializer::ensureRegistered(framework_type);
+
         auto& registry = getRegistry();
         std::string type_str(framework_type);
 
@@ -98,12 +109,20 @@ public:
             return it->second();
         }
 
-        std::cerr << "[AdapterFactory] Unknown framework: " << framework_type
-                  << ". Available: ";
+        std::vector<std::string> available;
         for (const auto& pair : registry) {
-            std::cerr << pair.first << " ";
+            available.push_back(pair.first);
         }
-        std::cerr << std::endl;
+        
+        std::ostringstream oss;
+        oss << "[AdapterFactory] Unknown framework: " << framework_type << ". Available: ";
+
+        std::string_view delim = "";
+        for (const auto& item : available) {
+            oss << delim << item;
+            delim = ", ";
+        }
+        LOG(ERROR) << oss.str();
 
         return nullptr;
     }
@@ -118,5 +137,15 @@ public:
         return frameworks;
     }
 };
+
+template<typename AdapterType>
+void registerAdapterImpl(std::string_view framework_type) {
+    internal::AdapterInitializer::registerAdapter(
+        framework_type,
+        [framework_type = std::string(framework_type)]() { 
+            EndpointAdapterFactory::registerAdapter<AdapterType>(framework_type); 
+        }
+    );
+}
 
 } // namespace mooncake_conductor

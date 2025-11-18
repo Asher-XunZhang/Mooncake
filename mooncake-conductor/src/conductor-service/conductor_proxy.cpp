@@ -5,14 +5,9 @@
 #include "hash.h"
 #include "block_serializer.h"
 #include "mooncake_store_communication_layer.h"
-
-#include "vllm_endpoint_adapter.h"
 #include "adapter_factory.h"
-#include <iostream>
-#include <cassert>
+
 #include <nlohmann/json.hpp>
-
-
 #include <glog/logging.h>
 #include <ylt/coro_http/coro_http_client.hpp>
 #include <ylt/coro_http/coro_http_server.hpp>
@@ -23,8 +18,11 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
+#include <cassert>
 
 namespace mooncake_conductor {
+
+namespace nl = nlohmann;
 
 ProxyServer::ProxyServer(const ProxyServerArgs& config)
     : port_(config.port),
@@ -200,7 +198,7 @@ void test_serializer() {
 
 void test_api_endpoint_adapter() {
     // 1. Verify adapter registration
-    auto adapter = mooncake_conductor::EndpointAdapterFactory::createAdapter("vllm");
+    auto adapter = EndpointAdapterFactory::createAdapter("vllm");
     assert(adapter && "VLLM adapter should be registered");
     std::cout << "[TEST] Adapter created successfully" << std::endl;
 
@@ -298,6 +296,7 @@ vllm:gpu_utilization{device="0"} 75.5
     std::cout << "[TEST] Prometheus metrics verified" << std::endl;
 
     std::cout << "\n[SUCCESS] All adapter tests passed!" << std::endl;
+    internal::AdapterInitializer::cleanup();
 }
 
 void test_main() {

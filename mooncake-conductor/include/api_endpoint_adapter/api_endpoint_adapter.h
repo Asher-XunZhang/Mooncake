@@ -1,5 +1,7 @@
 #pragma once
+
 #include "conductor_types.h"
+
 #include <string>
 #include <string_view>
 #include <memory>
