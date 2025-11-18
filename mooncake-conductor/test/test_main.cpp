@@ -135,6 +135,21 @@ void test_api_endpoint_adapter() {
     assert(health_req.method == "GET" && "Health method mismatch");
     LOG(INFO) << "[TEST] Health endpoint verified";
 
+    // completions endpoint
+    std::string completions_ep = adapter->buildCompletionsEndpoint(base_url);
+    assert(completions_ep == "http://localhost:8000/v1/completions" && "Completions endpoint mismatch");
+    auto completions_req = adapter->createCompletionsRequest(completions_ep);
+    assert(completions_req.url == "http://localhost:8000/v1/completions" && "Completions URL mismatch");
+    assert(completions_req.method == "POST" && "Completions method mismatch");
+    LOG(INFO) << "[TEST] Completions endpoint verified"; 
+    // chat/completions endpoint
+    std::string chat_completions_ep = adapter->buildChatCompletionsEndpoint(base_url);
+    assert(chat_completions_ep == "http://localhost:8000/v1/chat/completions" && "Chat Completions endpoint mismatch");
+    auto chat_completions_req = adapter->createChatCompletionsRequest(chat_completions_ep);
+    assert(chat_completions_req.url == "http://localhost:8000/v1/chat/completions" && "Chat Completions URL mismatch");
+    assert(chat_completions_req.method == "POST" && "Chat Completions method mismatch");
+    LOG(INFO) << "[TEST] Chat/Completions endpoint verified"; 
+
     // 3. Verify health response parsing
     std::string healthy_resp = R"({"status": "healthy", "version": "0.3.2"})";
     assert(adapter->parseHealthResponse(healthy_resp) && "Should parse as healthy");

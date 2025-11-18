@@ -50,6 +50,14 @@ public:
         return adapter_.createHealthRequest(endpoint);
     }
 
+    [[nodiscard]] HttpRequest createCompletionsRequest(std::string_view endpoint) const override {
+        return adapter_.createCompletionsRequest(endpoint);
+    }
+
+    [[nodiscard]] HttpRequest createChatCompletionsRequest(std::string_view endpoint) const override {
+        return adapter_.createChatCompletionsRequest(endpoint);
+    }
+
     [[nodiscard]] bool parseHealthResponse(std::string_view raw_response) const override {
         return adapter_.parseHealthResponse(raw_response);
     }
@@ -68,6 +76,14 @@ public:
 
     [[nodiscard]] std::string buildHealthEndpoint(std::string_view base_url) const override {
         return adapter_.buildHealthEndpoint(base_url);
+    }
+
+    [[nodiscard]] std::string buildCompletionsEndpoint(std::string_view base_url) const override {
+        return adapter_.buildCompletionsEndpoint(base_url);
+    }
+
+    [[nodiscard]] std::string buildChatCompletionsEndpoint(std::string_view base_url) const override {
+        return adapter_.buildChatCompletionsEndpoint(base_url);
     }
 
     [[nodiscard]] std::string getFrameworkType() const override {

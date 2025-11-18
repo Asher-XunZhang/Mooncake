@@ -48,6 +48,14 @@ public:
         std::string_view endpoint
     ) const;
 
+    [[nodiscard]] HttpRequest createCompletionsRequestImpl(
+        std::string_view endpoint
+    ) const;
+
+    [[nodiscard]] HttpRequest createChatCompletionsRequestImpl(
+        std::string_view endpoint
+    ) const;
+
     [[nodiscard]] bool parseHealthResponseImpl(
         std::string_view raw_response
     ) const;
@@ -56,6 +64,8 @@ public:
     [[nodiscard]] std::string buildMetricsEndpointImpl(std::string_view base_url) const;
     [[nodiscard]] std::string buildTokenizeEndpointImpl(std::string_view base_url) const;
     [[nodiscard]] std::string buildHealthEndpoint(std::string_view base_url) const;
+    [[nodiscard]] std::string buildCompletionsEndpoint(std::string_view base_url) const;
+    [[nodiscard]] std::string buildChatCompletionsEndpoint(std::string_view base_url) const;
 
 private:
     static bool isPrometheusMetrics(std::string_view text);

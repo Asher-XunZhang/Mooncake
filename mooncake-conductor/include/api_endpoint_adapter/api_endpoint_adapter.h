@@ -33,6 +33,12 @@ public:
 
     [[nodiscard]] virtual HttpRequest createHealthRequest(
         std::string_view endpoint) const = 0;
+    
+    [[nodiscard]] virtual HttpRequest createCompletionsRequest(
+        std::string_view endpoint) const = 0;
+    
+    [[nodiscard]] virtual HttpRequest createChatCompletionsRequest(
+        std::string_view endpoint) const = 0;
 
     [[nodiscard]] virtual bool parseHealthResponse(
         std::string_view raw_response) const = 0;
@@ -47,6 +53,12 @@ public:
         std::string_view base_url) const = 0;
 
     [[nodiscard]] virtual std::string buildHealthEndpoint(
+        std::string_view base_url) const = 0;
+
+    [[nodiscard]] virtual std::string buildCompletionsEndpoint(
+        std::string_view base_url) const = 0;
+    
+    [[nodiscard]] virtual std::string buildChatCompletionsEndpoint(
         std::string_view base_url) const = 0;
 
     [[nodiscard]] virtual std::string getFrameworkType() const = 0;
@@ -85,6 +97,14 @@ public:
         return derived().createHealthRequestImpl(endpoint);
     }
 
+    [[nodiscard]] HttpRequest createCompletionsRequest(std::string_view endpoint) const {
+        return derived().createCompletionsRequestImpl(endpoint);
+    }
+
+    [[nodiscard]] HttpRequest createChatCompletionsRequest(std::string_view endpoint) const {
+        return derived().createChatCompletionsRequestImpl(endpoint);
+    }
+
     [[nodiscard]] bool parseHealthResponse(std::string_view raw_response) const {
         return derived().parseHealthResponseImpl(raw_response);
     }
@@ -103,6 +123,14 @@ public:
 
     [[nodiscard]] std::string buildHealthEndpoint(std::string_view base_url) const {
         return derived().buildHealthEndpoint(base_url);
+    }
+
+    [[nodiscard]] std::string buildCompletionsEndpoint(std::string_view base_url) const {
+        return derived().buildCompletionsEndpoint(base_url);
+    }
+
+    [[nodiscard]] std::string buildChatCompletionsEndpoint(std::string_view base_url) const {
+        return derived().buildChatCompletionsEndpoint(base_url);
     }
 
     [[nodiscard]] std::string getFrameworkType() const {

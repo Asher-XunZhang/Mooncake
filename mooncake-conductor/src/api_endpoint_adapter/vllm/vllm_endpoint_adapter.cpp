@@ -143,6 +143,20 @@ HttpRequest VLLMEndpointAdapter::createHealthRequestImpl(
     return createGetRequest(endpoint);
 }
 
+HttpRequest VLLMEndpointAdapter::createCompletionsRequestImpl(
+    std::string_view endpoint
+) const {
+    return createPostRequest(endpoint, "");
+}
+
+HttpRequest VLLMEndpointAdapter::createChatCompletionsRequestImpl(
+    std::string_view endpoint
+) const {
+    return createPostRequest(endpoint, "");
+}
+
+
+
 bool VLLMEndpointAdapter::parseHealthResponseImpl(
     std::string_view raw_response
 ) const {
@@ -168,6 +182,14 @@ std::string VLLMEndpointAdapter::buildTokenizeEndpointImpl(std::string_view base
 
 std::string VLLMEndpointAdapter::buildHealthEndpoint(std::string_view base_url) const {
     return buildUrl(base_url, "/health");
+}
+
+std::string VLLMEndpointAdapter::buildCompletionsEndpoint(std::string_view base_url) const {
+    return buildUrl(base_url, "/v1/completions");
+}
+
+std::string VLLMEndpointAdapter::buildChatCompletionsEndpoint(std::string_view base_url) const {
+    return buildUrl(base_url, "/v1/chat/completions");
 }
 
 bool VLLMEndpointAdapter::isPrometheusMetrics(std::string_view text) {
