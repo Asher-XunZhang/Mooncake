@@ -1,4 +1,3 @@
-#include "cli_parse.h"
 #include "conductor_types.h"
 
 #include <gflags/gflags.h>
@@ -16,6 +15,7 @@ DEFINE_string(decoder_ports, "8002", "Comma-separated list of decoder ports");
 DEFINE_int32(max_retries, 3, "Maximum number of retries for HTTP requests");
 DEFINE_double(retry_delay, 0.001, "Base delay (seconds) for exponential backoff retries");
 
+namespace {
 
 std::vector<std::string> split_str_list(const std::string& str, char delimiter) {
     std::vector<std::string> tokens;
@@ -41,11 +41,15 @@ std::vector<int> parse_int_list(const std::string& str, char delimiter) {
     return result;
 }
 
+}
 
-mooncake_conductor::ProxyServerArgs parse_args(int argc, char** argv) {
+
+namespace mooncake_conductor {
+
+ProxyServerArgs parse_args(int argc, char** argv) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
     
-    mooncake_conductor::ProxyServerArgs args;
+    ProxyServerArgs args;
     args.port = FLAGS_port;
     args.host = FLAGS_host;
     args.max_retries = FLAGS_max_retries;
@@ -81,4 +85,6 @@ mooncake_conductor::ProxyServerArgs parse_args(int argc, char** argv) {
               << ", decoder ports: " << FLAGS_decoder_ports;
     
     return args;
+}
+
 }

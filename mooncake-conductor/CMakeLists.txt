@@ -8,6 +8,7 @@ file(GLOB_RECURSE MOONCAKE_CONDUCTOR_SOURCES
     "src/*.cpp"
     "src/*.cxx"
     "src/*.cc"
+    "test/*.cpp"
 )
 
 file(GLOB_RECURSE ALL_HEADER_DIRS 
