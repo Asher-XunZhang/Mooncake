@@ -5,6 +5,9 @@
 #include "hash.h"
 #include "block_serializer.h"
 #include "mooncake_store_communication_layer.h"
+#include "prefill_planner.h"
+#include "replica.h"
+#include "allocator.h"
 #include "adapter_factory.h"
 
 #include <nlohmann/json.hpp>
@@ -299,6 +302,81 @@ vllm:gpu_utilization{device="0"} 75.5
     internal::AdapterInitializer::cleanup();
 }
 
+static mooncake::Replica::Descriptor make_memory_replica_desc(
+    const std::string& endpoint,
+    std::uint64_t size = 1024) {
+    mooncake::Replica::Descriptor desc;
+    desc.status = mooncake::ReplicaStatus::COMPLETE;
+
+    mooncake::MemoryDescriptor mem;
+    mooncake::AllocatedBuffer::Descriptor buf_desc;
+    buf_desc.size_ = size;
+    buf_desc.buffer_address_ = 0;  // not used in this test
+    buf_desc.transport_endpoint_ = endpoint;
+
+    mem.buffer_descriptors.push_back(buf_desc);
+    desc.descriptor_variant = mem;
+    return desc;
+}
+
+void test_prefill_planner() {
+    using mooncake_conductor::PrefillPlanner;
+    using mooncake_conductor::BestPrefillResult;
+
+    std::cout << "[TEST] PrefillPlanner longest-prefix / best-node selection\n";
+
+    std::vector<std::string> keys = {"k1", "k2", "k3"};
+
+    std::vector<tl::expected<GetReplicaListResponse, ErrorCode>> results;
+    results.resize(keys.size());
+
+    /**
+     * Scenario:
+     * - NodeA has replicas for k1, k2
+     * - NodeB has replicas for k1, k3
+     * - NodeC has replicas for k1, k2, k3
+     * So the best node should be NodeC with prefix "k3"
+     */
+    // k1
+        {
+        GetReplicaListResponse resp;
+        resp.replicas.push_back(make_memory_replica_desc("NodeA:9000"));
+        resp.replicas.push_back(make_memory_replica_desc("NodeB:9000"));
+        resp.replicas.push_back(make_memory_replica_desc("NodeC:9000"));
+        results[0] = resp;
+    }
+    
+    // k2
+    {
+        GetReplicaListResponse resp;
+        resp.replicas.push_back(make_memory_replica_desc("NodeA:9000"));
+        resp.replicas.push_back(make_memory_replica_desc("NodeC:9000"));
+        results[1] = resp;
+    }
+
+    // K3
+    {
+        GetReplicaListResponse resp;
+        resp.replicas.push_back(make_memory_replica_desc("NodeC:9000"));
+        results[2] = resp;
+    }
+
+    PrefillPlanner planner{};
+    BestPrefillResult result = planner.find_best_prefill(keys, results);
+
+    std::cout << "  hit: " << std::boolalpha << result.hit << std::endl;
+    std::cout << "  best_index: " << result.best_index << std::endl;
+    std::cout << "  best_key: " << result.best_key << std::endl;
+    std::cout << "  node_id: " << result.node_id << std::endl;
+
+    assert(result.hit && "PrefillPlanner should find a hit");
+    assert(result.best_index == 2 && "Best index should be 2 (k3)");
+    assert(result.best_key == "k3" && "Best key should be k3");
+    assert(result.node_id == "NodeC:9000" && "Best node should be NodeC:9000");
+
+    std::cout << "[TEST] PrefillPlanner longest-prefix / best-node selection PASSED" << std::endl;
+}
+
 void test_main() {
     verify_none_hash();
     std::cout << std::endl;
@@ -307,6 +385,8 @@ void test_main() {
     test_serializer();
     std::cout << std::endl;
     test_api_endpoint_adapter();
+    std::cout << std::endl;
+    test_prefill_planner();
     std::cout << std::endl;
 }
 
