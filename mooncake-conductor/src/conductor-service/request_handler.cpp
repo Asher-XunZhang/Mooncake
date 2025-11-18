@@ -1,5 +1,7 @@
 #include "request_handler.h"
 #include "conductor_utils.h"
+#include "adapter_factory.h"
+
 #include <ylt/coro_http/coro_http_client.hpp>
 
 #include <unordered_map>
@@ -117,6 +119,8 @@ RequestHandler::RequestHandler(const ProxyServerArgs config, std::string collect
       LOG(INFO) << "Decoder instance: " << instance.first << ":" << instance.second;
     }
 
+    this->endpoint_adapter_ = EndpointAdapterFactory::createAdapter("vllm");
+
     int timeout{500};
     safe_env_to_positive_int("MOONCAKE_CONDUCTOR_TIMEOUT", timeout);
     // step 1   test all instances (prefill & decoder)
@@ -130,7 +134,7 @@ void RequestHandler::ping_llm_server(std::chrono::milliseconds timeout) {
     for (const auto& prefiller : proxy_state_->prefillers) {
         std::string url = "http://" + prefiller->host + ":" + std::to_string(prefiller->port);
         prefiller->client->set_req_timeout(timeout);
-        auto result = prefiller->client->get(url + "/health");
+        auto result = prefiller->client->get(this->endpoint_adapter_->buildHealthEndpoint(url));
         if (result.net_err || result.status != 200) {
             LOG(ERROR) << "LLM prefill server " << url << " is unhealthy. Net err: " << result.net_err << ", Status: " << result.status;
             break;
@@ -140,7 +144,7 @@ void RequestHandler::ping_llm_server(std::chrono::milliseconds timeout) {
     for (const auto& decoder : proxy_state_->decoders) {
         std::string url = "http://" + decoder->host + ":" + std::to_string(decoder->port);
         decoder->client->set_req_timeout(timeout);
-        auto result = decoder->client->get(url + "/health");
+        auto result = decoder->client->get(this->endpoint_adapter_->buildHealthEndpoint(url));
         if (result.net_err || result.status != 200) {
             LOG(ERROR) << "LLM decode server " << url << " is unhealthy. Net err: " << result.net_err << ", Status: " << result.status;
             break;

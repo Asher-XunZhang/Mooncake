@@ -2,6 +2,7 @@
 
 // #include "cache_hit_distribution_collector.h"
 #include "conductor_types.h"
+#include "api_endpoint_adapter.h"
 
 #include <ylt/coro_http/coro_http_client.hpp>
 #include <ylt/coro_http/coro_http_server.hpp>
@@ -118,6 +119,7 @@ private:
     // std::shared_ptr<LoadMetricsCollector> load_collector_;
     // void parseAndValidateRequest(const coro_http_request& request);
     void triggerLoadMetricsCollection();
+    std::unique_ptr<IEndpointAdapter> endpoint_adapter_;
 };
 
 }  // namespace mooncake_conduct
