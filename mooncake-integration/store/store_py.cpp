@@ -608,7 +608,23 @@ PYBIND11_MODULE(store, m) {
             py::arg("prefer_alloc_in_same_node") = false,
             "Get object data directly into multiple pre-allocated buffers for "
             "multiple "
-            "keys");
+            "keys")
+        .def(
+            "batch_get_replica",
+            [](MooncakeStorePyWrapper &self,
+               const std::vector<std::string> &keys) {
+                py::gil_scoped_release release;
+                return self.store_->batchgetreplica(keys);
+            },
+            py::arg("keys"))
+        .def(
+            "get_replica",
+            [](MooncakeStorePyWrapper &self,
+               const std::string &key) {
+                py::gil_scoped_release release;
+                return self.store_->getreplica(key);
+            },
+            py::arg("key"));
 
     // Expose NUMA binding as a module-level function (no self required)
     m.def(

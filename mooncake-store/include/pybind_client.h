@@ -356,6 +356,9 @@ class PyClient {
     std::vector<std::shared_ptr<BufferHandle>> batch_get_buffer_internal(
         const std::vector<std::string> &keys);
 
+    tl::expected<std::map<std::string, std::vector<Replica::Descriptor>>, ErrorCode> batchgetreplica(const std::vector<std::string>& keys);
+    tl::expected<Replica::Descriptor, ErrorCode> getreplica(const std::string &key);
+
     std::shared_ptr<mooncake::Client> client_ = nullptr;
     std::shared_ptr<ClientBufferAllocator> client_buffer_allocator_ = nullptr;
     std::unique_ptr<AutoPortBinder> port_binder_ = nullptr;
