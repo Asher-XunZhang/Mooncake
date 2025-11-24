@@ -1,4 +1,7 @@
 ## compile
+
+> 依赖于`boost 1.82.0`以上的版本
+
 按照mooncake流程进行编译
 ```bash
 mkdir build

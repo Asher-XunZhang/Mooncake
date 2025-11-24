@@ -1,3 +1,4 @@
+// adapter_factory.h
 #pragma once
 #include "api_endpoint_adapter.h"
 #include "adapter_initializer.h"
@@ -20,48 +21,6 @@ class EndpointAdapterWrapper : public IEndpointAdapter {
     AdapterType adapter_;
 
 public:
-    [[nodiscard]] HttpRequest createTokenizationRequest(
-        std::string_view prompt, std::string_view endpoint) const override {
-        return adapter_.createTokenizationRequest(prompt, endpoint);
-    }
-
-    [[nodiscard]] TokenizationResult parseTokenizationResponse(
-        std::string_view raw_response) const override {
-        return adapter_.parseTokenizationResponse(raw_response);
-    }
-
-    [[nodiscard]] HttpRequest createConfigRequest(std::string_view endpoint) const override {
-        return adapter_.createConfigRequest(endpoint);
-    }
-
-    [[nodiscard]] EngineConfig parseConfigResponse(std::string_view raw_response) const override {
-        return adapter_.parseConfigResponse(raw_response);
-    }
-
-    [[nodiscard]] HttpRequest createMetricsRequest(std::string_view endpoint) const override {
-        return adapter_.createMetricsRequest(endpoint);
-    }
-
-    [[nodiscard]] LoadMetrics parseMetricsResponse(std::string_view raw_response) const override {
-        return adapter_.parseMetricsResponse(raw_response);
-    }
-
-    [[nodiscard]] HttpRequest createHealthRequest(std::string_view endpoint) const override {
-        return adapter_.createHealthRequest(endpoint);
-    }
-
-    [[nodiscard]] HttpRequest createCompletionsRequest(std::string_view endpoint) const override {
-        return adapter_.createCompletionsRequest(endpoint);
-    }
-
-    [[nodiscard]] HttpRequest createChatCompletionsRequest(std::string_view endpoint) const override {
-        return adapter_.createChatCompletionsRequest(endpoint);
-    }
-
-    [[nodiscard]] bool parseHealthResponse(std::string_view raw_response) const override {
-        return adapter_.parseHealthResponse(raw_response);
-    }
-
     [[nodiscard]] std::string buildConfigEndpoint(std::string_view base_url) const override {
         return adapter_.buildConfigEndpoint(base_url);
     }

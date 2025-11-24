@@ -1,4 +1,5 @@
-#include "api_endpoint_adapter/internal/adapter_initializer.h"
+// adapter_cleanup.cpp
+#include "adapter_initializer.h"
 
 #include <cstdlib>
 

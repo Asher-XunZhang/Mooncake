@@ -1,9 +1,14 @@
+// conductor_utils.cpp
+#include "conductor_utils.h"
+
 #include <glog/logging.h>
 
 #include <cstdlib>
 #include <charconv>
 #include <string>
 #include <system_error>
+#include <charconv>
+#include <array>
 
 namespace mooncake_conductor {
 
@@ -46,5 +51,20 @@ bool safe_env_to_positive_int(const char* env_name, int& out_value) {
     out_value = num;
     return true;
 }
+
+std::string uuid_to_str(const std::pair<uint64_t, uint64_t>& my_pair) {
+    std::array<char, 50> buffer1{}; // 预留足够空间存储两个uint64_t的字符串形式
+    std::array<char, 50> buffer2{};
+    
+    auto [ptr1, ec1] = std::to_chars(buffer1.data(), buffer1.data() + buffer1.size(), my_pair.first);
+    auto [ptr2, ec2] = std::to_chars(buffer2.data(), buffer2.data() + buffer2.size(), my_pair.second);
+    
+    if (ec1 == std::errc() && ec2 == std::errc()) {
+        return "[" + std::string(buffer1.data(), ptr1) + ", " + std::string(buffer2.data(), ptr2) + "]";
+    }
+    // 如果转换失败，回退到to_string
+    return "[" + std::to_string(my_pair.first) + ", " + std::to_string(my_pair.second) + "]";
+}
+
 
 }
