@@ -1,3 +1,4 @@
+// conductor_types.h
 #pragma once
 
 #include <string>
@@ -26,14 +27,19 @@ struct NodeMetrics {
 struct ProxyServerArgs {
     int port;
     std::string host;
+    int mooncake_store_port;
+    std::string mooncake_store_host;
     std::vector<std::string> prefiller_hosts;
     std::vector<int> prefiller_ports;
     std::vector<std::string> decoder_hosts;
     std::vector<int> decoder_ports;
+    std::vector<std::string> both_hosts;
+    std::vector<int> both_ports;
     int max_retries;
     double retry_delay;
     std::vector<std::pair<std::string, int>> prefiller_instances;
     std::vector<std::pair<std::string, int>> decoder_instances;
+    std::vector<std::pair<std::string, int>> both_instances;
 };
 
 

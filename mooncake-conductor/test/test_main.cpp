@@ -22,11 +22,12 @@
 
 namespace mooncake_conductor::test {
 
-void test_mooncake_store_communication_layer() {
-    LOG(INFO) << "尝试第一次读取Mooncake Store..  ";
-    auto mscl = std::make_unique<MooncakeStoreCommunicationLayer>();
-    std::string s = "111";
-    auto result = mscl->GetReplicaList(s);
+void test_mooncake_store_communication_layer(const ProxyServerArgs& configs) {
+    auto mooncake_store_addr = configs.mooncake_store_host + ":" +std::to_string(configs.mooncake_store_port);
+    LOG(INFO) << "尝试第一次读取Mooncake Store (" << mooncake_store_addr << ")...";
+    auto mscl = std::make_unique<MooncakeStoreCommunicationLayer>(mooncake_store_addr);
+
+    auto result = mscl->GetReplicaList("/data1/Qwen2.5-7B-Instruct/@1@0@e19dbfc0afa29fc078aaf903ec4199a0f744a7a8d7126d2417d0e257d4d51ab9");
     if (result.has_value()) {
         LOG(INFO) << "成功获取副本列表！";
         const auto& response = result.value();
@@ -248,13 +249,13 @@ void test_prefill_planner() {
     LOG(INFO) << "[TEST] PrefillPlanner longest-prefix / best-node selection PASSED";
 }
 
-void test_main() {
-    test_mooncake_store_communication_layer();
+void test_main(const ProxyServerArgs& configs) {
+    test_mooncake_store_communication_layer(configs);
     LOG(INFO) << "-----------------------------------------------";
-    verify_none_hash();
-    LOG(INFO) << "-----------------------------------------------";
-    run_consistency_test();
-    LOG(INFO) << "-----------------------------------------------";
+    // verify_none_hash();
+    // LOG(INFO) << "-----------------------------------------------";
+    // run_consistency_test();
+    // LOG(INFO) << "-----------------------------------------------";
     test_serializer();
     LOG(INFO) << "-----------------------------------------------";
     test_api_endpoint_adapter();

@@ -13,7 +13,7 @@ namespace mooncake_conductor {
 
     ProxyServerArgs parse_args(int, char**);
     namespace test {
-        void test_main();
+        void test_main(const ProxyServerArgs&);
     }
 }
 
@@ -29,33 +29,10 @@ void signal_handler(int signal) {
 void StartProxyServer(const mooncake_conductor::ProxyServerArgs& config) {
     std::signal(SIGINT, signal_handler);  // Ctrl+C
     std::signal(SIGTERM, signal_handler); // kill
-    // auto server = std::make_unique<mooncake_conductor::ProxyServer>(config);
-    // server->start_server();
-    // LOG(INFO) << "Async Starting mooncake-conductor server on " << config.host << ":" << config.port;
-    // // wait 1s to let server start
-    // std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    // LOG(INFO) << "\n  press Ctrl+C to stop server..  ";
-    // LOG(INFO) << "\n  尝试第一次读取Mooncake Store..  ";
-    // mooncake_conductor::MooncakeStoreCommunicationLayer mscl{};
-    // std::string s = "111";
-    // auto result = mscl.GetReplicaList(s);
-    // if (result.has_value()) {
-    //     LOG(INFO) << "成功获取副本列表！";
-    //     const auto& response = result.value();
-    //     LOG(INFO) << "副本数量: " << response.replicas.size();
-    // } else {
-    //     LOG(ERROR) << "获取副本列表失败，错误码: " 
-    //                 << mooncake::toString(result.error());
-    // }
 
-    // mooncake_conductor::test::test_main();
-
-    // while (!g_stop_flag.load(std::memory_order_relaxed)) {
-    //     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    // }
     using namespace mooncake_conductor;
     
-    test::test_main();
+    // test::test_main(config); // TODO: 测试函数，需更改为UT
 
     ConductorProxy::Config conductor_proxy_config{};
     // TODO: 其它参数解析
@@ -71,9 +48,10 @@ void StartProxyServer(const mooncake_conductor::ProxyServerArgs& config) {
         conductor_proxy->register_node(each.first, each.second, NodeCapability::DECODING);
     }
     
-    // for(const auto& each : config.prefiller_instances) {
-    //     conductor_proxy->register_node(each.first, each.second, NodeCapability::BOTH);
-    // }
+    for(const auto& each : config.both_instances) {
+        conductor_proxy->register_node(each.first, each.second, NodeCapability::BOTH);
+    }
+
     conductor_proxy->start();
     LOG(INFO) << "press Ctrl+C to stop server...";
     while (!g_stop_flag.load()) {
@@ -109,4 +87,4 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }
-//mooncake_conductor --port=8080 --prefiller_hosts="127.0.0.1,127.0.0.1" --prefiller_ports="8001,8002"
+//mooncake_conductor --port=8180 --both_hosts="127.0.0.1" --both_ports="8100" --mooncake_store_port=50098 --mooncake_store_host="10.175.119.75"
