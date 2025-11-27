@@ -110,7 +110,7 @@ check_success "Failed to create nlohmann directory"
 # Download single header file (v3.11.3)
 JSON_URL="${GITHUB_PROXY}/nlohmann/json/releases/download/v3.11.3/json.hpp"
 echo "Downloading nlohmann/json from ${JSON_URL}"
-wget -q --show-progress -O "${NLOHMANN_DIR}/json.hpp" "${JSON_URL}"
+wget --show-progress -O "${NLOHMANN_DIR}/json.hpp" "${JSON_URL}"
 check_success "Failed to download nlohmann/json header"
 
 # Verify file integrity (basic check)

@@ -2,7 +2,7 @@ project(MooncakeConductor)
 
 find_package(OpenSSL REQUIRED)
 find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
-find_package(Boost REQUIRED COMPONENTS python${Python3_VERSION_MAJOR}${Python3_VERSION_MINOR})
+find_package(Boost REQUIRED COMPONENTS python3)
 
 file(GLOB_RECURSE MOONCAKE_CONDUCTOR_SOURCES
     "src/*.cpp"
@@ -66,7 +66,7 @@ target_link_libraries(mooncake_conductor PRIVATE
     OpenSSL::SSL
     OpenSSL::Crypto
     Boost::boost
-    Boost::python${Python3_VERSION_MAJOR}${Python3_VERSION_MINOR}
+    Boost::python3
     ${Python3_LIBRARIES}
 )
 
@@ -75,4 +75,4 @@ install(TARGETS mooncake_conductor DESTINATION bin)
 
 message(STATUS "Found Python3: ${Python3_VERSION}")
 message(STATUS "Found Boost: ${Boost_VERSION}")
-message(STATUS "Boost Python component: python${Python3_VERSION_MAJOR}${Python3_VERSION_MINOR}")
+message(STATUS "Boost Python component: python3")
