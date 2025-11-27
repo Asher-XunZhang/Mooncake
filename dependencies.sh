@@ -91,10 +91,10 @@ if [ "$SKIP_CONFIRM" = false ]; then
 fi
 
 
-# Update package lists
-# print_section "Updating package lists"
-# apt-get update
-# check_success "Failed to update package lists"
+Update package lists
+print_section "Updating package lists"
+apt-get update
+check_success "Failed to update package lists"
 
 # Install system packages
 print_section "Installing system packages"
@@ -124,9 +124,9 @@ SYSTEM_PACKAGES="build-essential \
                   pkg-config \
                   patchelf"
 
-# apt-get install -y $SYSTEM_PACKAGES
-# check_success "Failed to install system packages"
-# print_success "System packages installed successfully"
+apt-get install -y $SYSTEM_PACKAGES
+check_success "Failed to install system packages"
+print_success "System packages installed successfully"
 
 # Install yalantinglibs
 print_section "Installing yalantinglibs"
@@ -158,9 +158,9 @@ cd yalantinglibs
 check_success "Failed to change to yalantinglibs directory"
 
 # Checkout version 0.5.5
-echo "Checking out yalantinglibs version main..."
-git checkout main
-check_success "Failed to checkout yalantinglibs version main"
+echo "Checking out yalantinglibs version 0.5.6..."
+git checkout 0.5.6
+check_success "Failed to checkout yalantinglibs version 0.5.6"
 
 mkdir -p build
 check_success "Failed to create build directory"
