@@ -20,8 +20,9 @@ DEFINE_string(prefiller_hosts, "", "Comma-separated list of prefiller hosts");
 DEFINE_string(prefiller_ports, "", "Comma-separated list of prefiller ports");
 DEFINE_string(decoder_hosts, "", "Comma-separated list of decoder hosts");
 DEFINE_string(decoder_ports, "", "Comma-separated list of decoder ports");
-DEFINE_string(both_hosts, "", "Comma-separated list of prefiller hosts");
-DEFINE_string(both_ports, "", "Comma-separated list of prefiller ports");
+DEFINE_string(mixed_hosts, "", "Comma-separated list of mixed hosts");
+DEFINE_string(mixed_ports, "", "Comma-separated list of mixed ports");
+DEFINE_string(pd_enable, "", "PD model");
 DEFINE_int32(max_retries, 3, "Maximum number of retries for HTTP requests");
 DEFINE_double(retry_delay, 0.001, "Base delay (seconds) for exponential backoff retries");
 
@@ -103,10 +104,9 @@ ProxyServerArgs parse_args(int argc, char** argv) {
     args.prefiller_ports = parse_int_list(FLAGS_prefiller_ports, ',');
     args.decoder_hosts = split_str_list(FLAGS_decoder_hosts, ',');
     args.decoder_ports = parse_int_list(FLAGS_decoder_ports, ',');
-    args.both_hosts = split_str_list(FLAGS_both_hosts, ',');
-    args.both_ports = parse_int_list(FLAGS_both_ports, ',');
+    args.mixed_hosts = split_str_list(FLAGS_mixed_hosts, ',');
+    args.mixed_ports = parse_int_list(FLAGS_mixed_ports, ',');
 
-    
     // validate host and port number match
     if (args.prefiller_hosts.size() != args.prefiller_ports.size()) {
         throw std::invalid_argument(
@@ -118,9 +118,9 @@ ProxyServerArgs parse_args(int argc, char** argv) {
             "Number of decoder hosts must match number of decoder ports");
     }
 
-    if (args.both_hosts.size() != args.both_ports.size()) {
+    if (args.mixed_hosts.size() != args.mixed_ports.size()) {
         throw std::invalid_argument(
-            "Number of both hosts must match number of both ports");
+            "Number of mixed hosts must match number of mixed ports");
     }
     
     for (size_t i = 0; i < args.prefiller_hosts.size(); ++i) {
@@ -131,17 +131,22 @@ ProxyServerArgs parse_args(int argc, char** argv) {
         args.decoder_instances.emplace_back(args.decoder_hosts[i], args.decoder_ports[i]);
     }
 
-    for (size_t i = 0; i < args.both_hosts.size(); ++i) {
-        args.both_instances.emplace_back(args.both_hosts[i], args.both_ports[i]);
+    for (size_t i = 0; i < args.mixed_hosts.size(); ++i) {
+        args.mixed_instances.emplace_back(args.mixed_hosts[i], args.mixed_ports[i]);
     }
+
+    args.enable_pd_separation = FLAGS_pd_enable == "true" ? true : false;
+    args.enable_pd_separation = args.enable_pd_separation || 
+                                (!args.prefiller_instances.empty() && !args.decoder_instances.empty());
 
     LOG(INFO) << "Conductor server port: " << args.port << ", host: " << args.host
               << ", prefiller hosts: " << FLAGS_prefiller_hosts
               << ", prefiller ports: " << FLAGS_prefiller_ports
               << ", decoder hosts: " << FLAGS_decoder_hosts
               << ", decoder ports: " << FLAGS_decoder_ports
-              << ", both hosts: " << FLAGS_both_hosts
-              << ", both ports: " << FLAGS_both_ports;
+              << ", both hosts: " << FLAGS_mixed_hosts
+              << ", both ports: " << FLAGS_mixed_ports
+              << ", PD enable: " << (args.enable_pd_separation ? "true" : "false");
     
     return args;
 }

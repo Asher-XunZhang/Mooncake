@@ -9,6 +9,7 @@
 #include <system_error>
 #include <charconv>
 #include <array>
+#include <format>
 
 namespace mooncake_conductor {
 
@@ -60,11 +61,49 @@ std::string uuid_to_str(const std::pair<uint64_t, uint64_t>& my_pair) {
     auto [ptr2, ec2] = std::to_chars(buffer2.data(), buffer2.data() + buffer2.size(), my_pair.second);
     
     if (ec1 == std::errc() && ec2 == std::errc()) {
-        return "[" + std::string(buffer1.data(), ptr1) + ", " + std::string(buffer2.data(), ptr2) + "]";
+        return std::string(buffer1.data(), ptr1) + std::string(buffer2.data(), ptr2);
     }
     // 如果转换失败，回退到to_string
-    return "[" + std::to_string(my_pair.first) + ", " + std::to_string(my_pair.second) + "]";
+    return std::to_string(my_pair.first) + std::to_string(my_pair.second);
 }
 
+Timer::Timer(std::string_view msg, std::source_location loc)
+    : start_time(std::chrono::steady_clock::now())
+    , message(msg)
+    , location(loc) 
+{
+    if (!message.empty()) {
+        LOG(INFO) << std::format("[{}:{}] {} - started\n", 
+                               location.file_name(), location.line(), message);
+    }
+}
+
+Timer::~Timer() {
+    auto end_time = std::chrono::steady_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+        end_time - start_time);
+    
+    if (!message.empty()) {
+        LOG(INFO) << std::format("[{}:{}] {} - completed in {}ms\n", 
+                               location.file_name(), location.line(), 
+                               message, duration.count());
+    } else {
+        LOG(INFO) << std::format("Operation completed in {}ms\n", duration.count());
+    }
+}
+
+auto Timer::elapsed() const -> int64_t {
+    auto current_time = std::chrono::steady_clock::now();
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+        current_time - start_time).count();
+}
+
+void Timer::reset() {
+    start_time = std::chrono::steady_clock::now();
+}
+
+auto Timer::create(std::string_view msg) -> Timer {
+    return Timer(msg);
+}
 
 }

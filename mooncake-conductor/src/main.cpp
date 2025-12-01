@@ -37,6 +37,7 @@ void StartProxyServer(const mooncake_conductor::ProxyServerArgs& config) {
     ConductorProxy::Config conductor_proxy_config{};
     // TODO: 其它参数解析
     conductor_proxy_config.listen_port = config.port;
+    conductor_proxy_config.enable_pd_separation = config.enable_pd_separation;
 
     auto conductor_proxy = std::make_unique<ConductorProxy>(conductor_proxy_config);
 
@@ -48,7 +49,7 @@ void StartProxyServer(const mooncake_conductor::ProxyServerArgs& config) {
         conductor_proxy->register_node(each.first, each.second, NodeCapability::DECODING);
     }
     
-    for(const auto& each : config.both_instances) {
+    for(const auto& each : config.mixed_instances) {
         conductor_proxy->register_node(each.first, each.second, NodeCapability::BOTH);
     }
 
@@ -87,4 +88,4 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }
-//mooncake_conductor --port=8180 --both_hosts="127.0.0.1" --both_ports="8100" --mooncake_store_port=50098 --mooncake_store_host="10.175.119.75"
+//mooncake_conductor --port=8180 --mixed_hosts="127.0.0.1" --mixed_ports="8100" --mooncake_store_port=50098 --mooncake_store_host="10.175.119.75"
