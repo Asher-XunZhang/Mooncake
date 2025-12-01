@@ -3,6 +3,7 @@ project(MooncakeConductor)
 find_package(OpenSSL REQUIRED)
 find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 find_package(Boost REQUIRED COMPONENTS python3)
+find_package(cppzmq REQUIRED)
 
 file(GLOB_RECURSE MOONCAKE_CONDUCTOR_SOURCES
     "src/*.cpp"
@@ -68,6 +69,7 @@ target_link_libraries(mooncake_conductor PRIVATE
     Boost::boost
     Boost::python3
     ${Python3_LIBRARIES}
+    cppzmq
 )
 
 install(TARGETS mooncake_conductor DESTINATION bin)
@@ -75,4 +77,4 @@ install(TARGETS mooncake_conductor DESTINATION bin)
 
 message(STATUS "Found Python3: ${Python3_VERSION}")
 message(STATUS "Found Boost: ${Boost_VERSION}")
-message(STATUS "Boost Python component: python3")
+message(STATUS "Found cppzmq: ${cppzmq_VERSION}")
