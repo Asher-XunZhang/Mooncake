@@ -1,8 +1,5 @@
 project(MooncakeConductor)
 
-find_package(OpenSSL REQUIRED)
-find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
-find_package(Boost REQUIRED COMPONENTS python3)
 find_package(cppzmq REQUIRED)
 
 file(GLOB_RECURSE MOONCAKE_CONDUCTOR_SOURCES
@@ -43,8 +40,6 @@ target_include_directories(mooncake_conductor PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${INCLUDE_DIRS}
-    ${Python3_INCLUDE_DIRS}
-    ${Boost_INCLUDE_DIRS}
     ${THIRDPARTY_DIR}
 )
 
@@ -64,17 +59,9 @@ target_link_libraries(mooncake_conductor PRIVATE
     mooncake_store
     pthread
     mooncake_common
-    OpenSSL::SSL
-    OpenSSL::Crypto
-    Boost::boost
-    Boost::python3
-    ${Python3_LIBRARIES}
     cppzmq
 )
 
 install(TARGETS mooncake_conductor DESTINATION bin)
 
-
-message(STATUS "Found Python3: ${Python3_VERSION}")
-message(STATUS "Found Boost: ${Boost_VERSION}")
 message(STATUS "Found cppzmq: ${cppzmq_VERSION}")

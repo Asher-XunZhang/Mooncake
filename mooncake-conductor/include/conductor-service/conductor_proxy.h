@@ -6,7 +6,6 @@
 #include <ylt/coro_io/client_pool.hpp>
 #include <async_simple/coro/Lazy.h>
 
-#include <boost/asio.hpp>
 #include <nlohmann/json.hpp>
 
 #include <unordered_map>

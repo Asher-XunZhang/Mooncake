@@ -1,6 +1,5 @@
 // main.cpp
 #include "conductor_proxy.h"
-#include "mooncake_store_communication_layer.h"
 #include "conductor_types.h"
 
 #include <gflags/gflags.h>
@@ -11,10 +10,8 @@
 
 namespace mooncake_conductor {
 
-    ProxyServerArgs parse_args(int, char**);
-    namespace test {
-        void test_main(const ProxyServerArgs&);
-    }
+ProxyServerArgs parse_args(int, char**);
+
 }
 
 namespace {
@@ -31,8 +28,6 @@ void StartProxyServer(const mooncake_conductor::ProxyServerArgs& config) {
     std::signal(SIGTERM, signal_handler); // kill
 
     using namespace mooncake_conductor;
-    
-    // test::test_main(config); // TODO: 测试函数，需更改为UT
 
     ConductorProxy::Config conductor_proxy_config{};
     // TODO: 其它参数解析
